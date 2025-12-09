@@ -300,12 +300,16 @@
     </div>
 
     <script>
-        // Инициализация Telegram WebApp
-        const tg = window.Telegram.WebApp;
+        document.addEventListener('DOMContentLoaded', function() {
+             if (window.Telegram && window.Telegram.WebApp) {
+                // Инициализация Telegram WebApp
+                const tg = window.Telegram.WebApp;
         
-        // Инициализация приложения
-        tg.expand();
-        tg.ready();
+                // Инициализация приложения
+                tg.expand();
+                tg.ready();
+             }
+        }
 
         // Данные конкурсов (в реальном приложении эти данные будут приходить с сервера)
         const competitions = [
@@ -565,3 +569,4 @@
 </body>
 
 </html>
+
