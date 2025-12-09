@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Конкурсы</title>
-    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
+	<script src="https://telegram.org/js/telegram-web-app.js" async></script>
     <style>
         * {
             margin: 0;
@@ -248,7 +248,6 @@
         }
 
         .loader {
-            display: none;
             text-align: center;
             padding: 40px;
             color: #667eea;
@@ -258,6 +257,16 @@
             text-align: center;
             padding: 40px;
             color: #666;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
         }
     </style>
 </head>
@@ -297,21 +306,16 @@
             <h3>✅ Регистрация успешна!</h3>
             <p>Вы успешно зарегистрированы на конкурс. Мы свяжемся с вами в ближайшее время.</p>
         </div>
+
+        <!-- Сообщение об ошибке -->
+        <div id="errorMessage" class="error-message">
+            <h3>⚠️ Ошибка загрузки</h3>
+            <p id="errorText">Не удалось загрузить список конкурсов</p>
+        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-             if (window.Telegram && window.Telegram.WebApp) {
-                // Инициализация Telegram WebApp
-                const tg = window.Telegram.WebApp;
-        
-                // Инициализация приложения
-                tg.expand();
-                tg.ready();
-             }
-        }
-
-        // Данные конкурсов (в реальном приложении эти данные будут приходить с сервера)
+        // Данные конкурсов
         const competitions = [
             {
                 id: 1,
@@ -329,7 +333,8 @@
                 startDate: "2024-06-01",
                 status: "active",
                 participants: 128,
-                maxParticipants: 200
+                maxParticipants: 200,
+                category: "Программирование"
             },
             {
                 id: 2,
@@ -347,7 +352,8 @@
                 startDate: "2024-05-01",
                 status: "active",
                 participants: 89,
-                maxParticipants: 150
+                maxParticipants: 150,
+                category: "Дизайн"
             },
             {
                 id: 3,
@@ -365,7 +371,27 @@
                 startDate: "2024-07-01",
                 status: "upcoming",
                 participants: 45,
-                maxParticipants: 100
+                maxParticipants: 100,
+                category: "Искусственный интеллект"
+            },
+            {
+                id: 4,
+                title: "Конкурс креативного письма",
+                description: "Напишите короткий рассказ на тему 'Город будущего'.",
+                detailedDescription: "Конкурс для писателей и всех, кто любит сочинять истории. Тема этого года - 'Город будущего'. Работы будут оцениваться по оригинальности сюжета, качеству языка и глубине раскрытия темы.",
+                prize: "Публикация в журнале + 30,000 ₽",
+                rules: [
+                    "Индивидуальное участие",
+                    "Объем: 3000-5000 слов",
+                    "Язык: русский",
+                    "Оригинальность работы обязательна"
+                ],
+                deadline: "2024-05-25",
+                startDate: "2024-04-01",
+                status: "active",
+                participants: 156,
+                maxParticipants: 300,
+                category: "Литература"
             }
         ];
 
@@ -376,163 +402,224 @@
         function loadCompetitions() {
             const container = document.getElementById('competitionList');
             const loader = document.getElementById('mainLoader');
+            const errorDiv = document.getElementById('errorMessage');
             
-            loader.style.display = 'none';
+            // Сначала показываем лоадер
+            loader.style.display = 'block';
+            errorDiv.style.display = 'none';
             
-            if (competitions.length === 0) {
-                container.innerHTML = `
-                    <div class="no-competitions">
-                        <h3>😔 Конкурсов пока нет</h3>
-                        <p>Новые конкурсы появятся скоро. Следите за обновлениями!</p>
-                    </div>
-                `;
-                return;
-            }
+            // Имитируем загрузку данных
+            setTimeout(() => {
+                loader.style.display = 'none';
+                
+                try {
+                    if (!competitions || competitions.length === 0) {
+                        container.innerHTML = `
+                            <div class="no-competitions">
+                                <h3>😔 Конкурсов пока нет</h3>
+                                <p>Новые конкурсы появятся скоро. Следите за обновлениями!</p>
+                            </div>
+                        `;
+                        return;
+                    }
 
-            container.innerHTML = competitions.map(comp => `
-                <div class="competition-card" onclick="showCompetitionDetail(${comp.id})">
-                    <h3>${comp.title}</h3>
-                    <p>${comp.description}</p>
-                    <div class="competition-meta">
-                        <span>📅 До ${formatDate(comp.deadline)}</span>
-                        <span>👥 ${comp.participants}/${comp.maxParticipants}</span>
-                    </div>
-                    <span class="status ${comp.status}">
-                        ${getStatusText(comp.status)}
-                    </span>
-                </div>
-            `).join('');
+                    // Сортируем конкурсы: активные сначала
+                    const sortedCompetitions = [...competitions].sort((a, b) => {
+                        const statusOrder = { active: 1, upcoming: 2, ended: 3 };
+                        return statusOrder[a.status] - statusOrder[b.status];
+                    });
+
+                    container.innerHTML = sortedCompetitions.map(comp => `
+                        <div class="competition-card" onclick="showCompetitionDetail(${comp.id})">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <h3>${comp.title}</h3>
+                                <span style="font-size: 0.8rem; color: #666; background: #f0f0f0; padding: 2px 8px; border-radius: 12px;">
+                                    ${comp.category}
+                                </span>
+                            </div>
+                            <p style="margin-top: 8px; color: #555;">${comp.description}</p>
+                            <div class="competition-meta">
+                                <span title="Дедлайн">📅 До ${formatDate(comp.deadline)}</span>
+                                <span title="Участники">👥 ${comp.participants}/${comp.maxParticipants}</span>
+                            </div>
+                            <span class="status ${comp.status}">
+                                ${getStatusText(comp.status)}
+                            </span>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    console.error('Ошибка при загрузке конкурсов:', error);
+                    errorDiv.style.display = 'block';
+                    document.getElementById('errorText').textContent = 'Ошибка при загрузке данных. Пожалуйста, попробуйте позже.';
+                }
+            }, 500); // Имитация задержки загрузки
         }
 
         // Показать детали конкурса
         function showCompetitionDetail(id) {
-            currentCompetition = competitions.find(c => c.id === id);
-            
-            document.getElementById('mainPage').style.display = 'none';
-            document.getElementById('detailPage').style.display = 'block';
-            document.getElementById('successMessage').style.display = 'none';
+            try {
+                currentCompetition = competitions.find(c => c.id === id);
+                
+                if (!currentCompetition) {
+                    alert('Конкурс не найден');
+                    return;
+                }
+                
+                document.getElementById('mainPage').style.display = 'none';
+                document.getElementById('detailPage').style.display = 'block';
+                document.getElementById('successMessage').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'none';
 
-            const detailContainer = document.getElementById('competitionDetail');
-            const loader = document.getElementById('detailLoader');
-            
-            loader.style.display = 'none';
+                const detailContainer = document.getElementById('competitionDetail');
+                const loader = document.getElementById('detailLoader');
+                
+                // Показываем лоадер
+                loader.style.display = 'block';
+                
+                // Имитируем загрузку
+                setTimeout(() => {
+                    loader.style.display = 'none';
 
-            detailContainer.innerHTML = `
-                <div class="detail-header">
-                    <h1>${currentCompetition.title}</h1>
-                    <div class="prize">🏆 ${currentCompetition.prize}</div>
-                    <div class="competition-meta">
-                        <span>📅 Начало: ${formatDate(currentCompetition.startDate)}</span>
-                        <span>⏰ Дедлайн: ${formatDate(currentCompetition.deadline)}</span>
-                        <span>👥 Участники: ${currentCompetition.participants}/${currentCompetition.maxParticipants}</span>
-                    </div>
-                    <span class="status ${currentCompetition.status}">
-                        ${getStatusText(currentCompetition.status)}
-                    </span>
-                </div>
+                    detailContainer.innerHTML = `
+                        <div class="detail-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 0.9rem; opacity: 0.9;">${currentCompetition.category}</span>
+                                <span class="status ${currentCompetition.status}">
+                                    ${getStatusText(currentCompetition.status)}
+                                </span>
+                            </div>
+                            <h1>${currentCompetition.title}</h1>
+                            <div class="prize">🏆 ${currentCompetition.prize}</div>
+                            <div class="competition-meta">
+                                <span title="Дата начала">📅 Начало: ${formatDate(currentCompetition.startDate)}</span>
+                                <span title="Дедлайн">⏰ Дедлайн: ${formatDate(currentCompetition.deadline)}</span>
+                                <span title="Участники">👥 ${currentCompetition.participants}/${currentCompetition.maxParticipants}</span>
+                            </div>
+                        </div>
 
-                <div class="description">
-                    <h3>📝 Описание конкурса</h3>
-                    <p>${currentCompetition.detailedDescription}</p>
-                </div>
+                        <div class="description">
+                            <h3>📝 Описание конкурса</h3>
+                            <p>${currentCompetition.detailedDescription}</p>
+                        </div>
 
-                <div class="rules">
-                    <h3>📋 Правила участия</h3>
-                    <ul>
-                        ${currentCompetition.rules.map(rule => `<li>${rule}</li>`).join('')}
-                    </ul>
-                </div>
+                        <div class="rules">
+                            <h3>📋 Правила участия</h3>
+                            <ul>
+                                ${currentCompetition.rules.map(rule => `<li>${rule}</li>`).join('')}
+                            </ul>
+                        </div>
 
-                <div class="registration-form" id="registrationForm">
-                    <h3>📝 Регистрация на конкурс</h3>
-                    <div class="form-group">
-                        <label for="userName">Ваше имя и фамилия *</label>
-                        <input type="text" id="userName" placeholder="Иван Иванов" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="userEmail">Email *</label>
-                        <input type="email" id="userEmail" placeholder="ivan@example.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="userTelegram">Telegram username</label>
-                        <input type="text" id="userTelegram" placeholder="@username">
-                    </div>
-                    <div class="form-group">
-                        <label for="userMessage">Дополнительная информация</label>
-                        <textarea id="userMessage" placeholder="Расскажите о своем опыте или идеях..."></textarea>
-                    </div>
-                    
-                    ${currentCompetition.status === 'active' ? `
-                        <button class="btn" onclick="registerForCompetition()" id="registerBtn">
-                            Зарегистрироваться
-                        </button>
-                    ` : `
-                        <button class="btn" disabled>
-                            ${currentCompetition.status === 'ended' ? 'Регистрация закрыта' : 'Регистрация скоро откроется'}
-                        </button>
-                    `}
-                </div>
-            `;
+                        <div class="registration-form" id="registrationForm">
+                            <h3>📝 Регистрация на конкурс</h3>
+                            <div class="form-group">
+                                <label for="userName">Ваше имя и фамилия *</label>
+                                <input type="text" id="userName" placeholder="Иван Иванов" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="userEmail">Email *</label>
+                                <input type="email" id="userEmail" placeholder="ivan@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="userTelegram">Telegram username</label>
+                                <input type="text" id="userTelegram" placeholder="@username">
+                            </div>
+                            <div class="form-group">
+                                <label for="userMessage">Дополнительная информация</label>
+                                <textarea id="userMessage" placeholder="Расскажите о своем опыте или идеях..."></textarea>
+                            </div>
+                            
+                            ${currentCompetition.status === 'active' ? `
+                                <button class="btn" onclick="registerForCompetition()" id="registerBtn">
+                                    Зарегистрироваться
+                                </button>
+                            ` : `
+                                <button class="btn" disabled>
+                                    ${currentCompetition.status === 'ended' ? 'Регистрация закрыта' : 'Регистрация скоро откроется'}
+                                </button>
+                            `}
+                        </div>
+                    `;
+                }, 300);
+            } catch (error) {
+                console.error('Ошибка при показе деталей конкурса:', error);
+                alert('Произошла ошибка при загрузке информации о конкурсе');
+            }
         }
 
         // Регистрация на конкурс
         function registerForCompetition() {
-            const userName = document.getElementById('userName').value;
-            const userEmail = document.getElementById('userEmail').value;
-            const userTelegram = document.getElementById('userTelegram').value;
-            const userMessage = document.getElementById('userMessage').value;
-            const registerBtn = document.getElementById('registerBtn');
+            try {
+                const userName = document.getElementById('userName').value;
+                const userEmail = document.getElementById('userEmail').value;
+                const userTelegram = document.getElementById('userTelegram').value;
+                const userMessage = document.getElementById('userMessage').value;
+                const registerBtn = document.getElementById('registerBtn');
 
-            // Валидация
-            if (!userName || !userEmail) {
-                alert('Пожалуйста, заполните обязательные поля');
-                return;
-            }
-
-            // Блокируем кнопку
-            registerBtn.disabled = true;
-            registerBtn.textContent = 'Регистрируем...';
-
-            // Имитация отправки данных на сервер
-            setTimeout(() => {
-                // В реальном приложении здесь будет fetch запрос к API
-                console.log('Регистрация отправлена:', {
-                    competitionId: currentCompetition.id,
-                    userName,
-                    userEmail,
-                    userTelegram,
-                    userMessage,
-                    telegramData: tg.initDataUnsafe // Данные Telegram пользователя
-                });
-
-                // Показываем сообщение об успехе
-                document.getElementById('registrationForm').style.display = 'none';
-                document.getElementById('successMessage').style.display = 'block';
-                
-                // Обновляем количество участников
-                currentCompetition.participants++;
-                
-                // Можно отправить данные в бота
-                if (tg.sendData) {
-                    const data = {
-                        action: 'register',
-                        competitionId: currentCompetition.id,
-                        userName: userName,
-                        userEmail: userEmail
-                    };
-                    tg.sendData(JSON.stringify(data));
+                // Валидация
+                if (!userName || !userEmail) {
+                    alert('Пожалуйста, заполните обязательные поля (имя и email)');
+                    return;
                 }
-            }, 1500);
+
+                if (!validateEmail(userEmail)) {
+                    alert('Пожалуйста, введите корректный email адрес');
+                    return;
+                }
+
+                // Блокируем кнопку
+                registerBtn.disabled = true;
+                registerBtn.textContent = 'Регистрируем...';
+
+                // Имитация отправки данных на сервер
+                setTimeout(() => {
+                    // В реальном приложении здесь будет fetch запрос к API
+                    console.log('Регистрация отправлена:', {
+                        competitionId: currentCompetition.id,
+                        competitionTitle: currentCompetition.title,
+                        userName,
+                        userEmail,
+                        userTelegram,
+                        userMessage,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    // Показываем сообщение об успехе
+                    document.getElementById('registrationForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    
+                    // Обновляем количество участников
+                    currentCompetition.participants++;
+                    
+                    // Показываем обновленный счетчик участников
+                    const participantSpan = document.querySelector('.detail-header .competition-meta span:nth-child(3)');
+                    if (participantSpan) {
+                        participantSpan.textContent = `👥 ${currentCompetition.participants}/${currentCompetition.maxParticipants}`;
+                    }
+                    
+                    // Можно также обновить список на главной странице
+                    const competitionInList = competitions.find(c => c.id === currentCompetition.id);
+                    if (competitionInList) {
+                        competitionInList.participants = currentCompetition.participants;
+                    }
+                }, 1500);
+            } catch (error) {
+                console.error('Ошибка при регистрации:', error);
+                alert('Произошла ошибка при регистрации. Пожалуйста, попробуйте еще раз.');
+            }
         }
 
         // Вспомогательные функции
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ru-RU', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+            } catch (error) {
+                return dateString;
+            }
         }
 
         function getStatusText(status) {
@@ -544,29 +631,67 @@
             return statusMap[status] || status;
         }
 
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
         function goBack() {
             document.getElementById('detailPage').style.display = 'none';
-            document.getElementById('mainPage').style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('mainPage').style.display = 'block';
+            
+            // Обновляем список конкурсов на случай, если изменилось количество участников
+            loadCompetitions();
         }
 
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('Страница загружена, загружаем конкурсы...');
             loadCompetitions();
             
-            // Если есть данные Telegram пользователя, можно их использовать
-            if (tg.initDataUnsafe.user) {
-                const user = tg.initDataUnsafe.user;
-                console.log('Telegram пользователь:', user);
+            // Проверяем, есть ли Telegram WebApp API
+            if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+                try {
+                    const tg = Telegram.WebApp;
+                    tg.expand();
+                    tg.ready();
+                    
+                    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                        const user = tg.initDataUnsafe.user;
+                        console.log('Пользователь Telegram:', user);
+                        
+                        // Можно автоматически заполнить форму данными Telegram
+                        // Например, если у пользователя есть username
+                        if (user.username) {
+                            // Сохраняем для использования в форме
+                            window.telegramUser = user;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Ошибка инициализации Telegram WebApp:', error);
+                    // Приложение продолжит работать без Telegram API
+                }
             }
         });
 
-        // Обработка событий Telegram WebApp
-        tg.onEvent('viewportChanged', () => {
-            tg.expand();
+        // Для отладки: показываем кнопку для тестирования без Telegram
+        window.addEventListener('load', () => {
+            // Добавляем информационное сообщение для отладки
+            const debugInfo = document.createElement('div');
+            debugInfo.style.position = 'fixed';
+            debugInfo.style.bottom = '10px';
+            debugInfo.style.right = '10px';
+            debugInfo.style.background = '#333';
+            debugInfo.style.color = 'white';
+            debugInfo.style.padding = '5px 10px';
+            debugInfo.style.borderRadius = '5px';
+            debugInfo.style.fontSize = '12px';
+            debugInfo.style.zIndex = '1000';
+            debugInfo.textContent = `Конкурсов: ${competitions.length}`;
+            document.body.appendChild(debugInfo);
         });
     </script>
 </body>
-
 </html>
-
