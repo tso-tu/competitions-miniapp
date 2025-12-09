@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конкурсы</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 16px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px 16px;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .competition-list {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .competition-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border-left: 4px solid #667eea;
+        }
+
+        .competition-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .competition-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+
+        .competition-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .competition-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+
+        .status.active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status.ended {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .status.upcoming {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 8px;
+        }
+
+        .detail-page {
+            display: none;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+
+        .detail-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+        }
+
+        .detail-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+
+        .prize {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin: 16px 0;
+        }
+
+        .description {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .description h3 {
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .rules {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .rules ul {
+            padding-left: 20px;
+            margin-top: 12px;
+        }
+
+        .rules li {
+            margin-bottom: 8px;
+        }
+
+        .registration-form {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .no-competitions {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Главная страница со списком конкурсов -->
+        <div id="mainPage">
+            <div class="header">
+                <h1>🚀 Конкурсы и Турниры</h1>
+                <p>Участвуйте в конкурсах и выигрывайте призы!</p>
+            </div>
+
+            <div id="competitionList" class="competition-list">
+                <!-- Список конкурсов будет загружен здесь -->
+                <div class="loader" id="mainLoader">
+                    <p>Загрузка конкурсов...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница деталей конкурса -->
+        <div id="detailPage" class="detail-page">
+            <button class="back-button" onclick="goBack()">
+                ← Назад к списку
+            </button>
+
+            <div id="competitionDetail">
+                <!-- Детали конкурса будут загружены здесь -->
+                <div class="loader" id="detailLoader">
+                    <p>Загрузка информации...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Сообщение об успешной регистрации -->
+        <div id="successMessage" class="success-message">
+            <h3>✅ Регистрация успешна!</h3>
+            <p>Вы успешно зарегистрированы на конкурс. Мы свяжемся с вами в ближайшее время.</p>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        
+        // Инициализация приложения
+        tg.expand();
+        tg.ready();
+
+        // Данные конкурсов (в реальном приложении эти данные будут приходить с сервера)
+        const competitions = [
+            {
+                id: 1,
+                title: "Хакатон по Веб-Разработке 2024",
+                description: "Создайте инновационное веб-приложение за 48 часов. Используйте современные технологии и фреймворки.",
+                detailedDescription: "Приглашаем разработчиков всех уровней принять участие в нашем ежегодном хакатоне. Тема этого года - 'Инновации в образовательных технологиях'. Участникам предстоит создать веб-приложение, которое решает актуальные проблемы в сфере образования.",
+                prize: "Главный приз: 100,000 ₽",
+                rules: [
+                    "Команды от 2 до 5 человек",
+                    "Использование любых технологий разрешено",
+                    "Проект должен быть открытым исходным кодом",
+                    "Презентация проекта в финальный день"
+                ],
+                deadline: "2024-06-15",
+                startDate: "2024-06-01",
+                status: "active",
+                participants: 128,
+                maxParticipants: 200
+            },
+            {
+                id: 2,
+                title: "Конкурс Дизайна UI/UX",
+                description: "Создайте лучший пользовательский интерфейс для мобильного приложения банка нового поколения.",
+                detailedDescription: "Конкурс направлен на поиск талантливых дизайнеров, способных создавать интуитивно понятные и красивые интерфейсы. Участникам предстоит разработать полный дизайн для банковского приложения будущего.",
+                prize: "Призовой фонд: 75,000 ₽",
+                rules: [
+                    "Индивидуальное участие",
+                    "Предоставление полного набора экранов",
+                    "Использование современных дизайн-систем",
+                    "Обязательное использование Figma"
+                ],
+                deadline: "2024-05-30",
+                startDate: "2024-05-01",
+                status: "active",
+                participants: 89,
+                maxParticipants: 150
+            },
+            {
+                id: 3,
+                title: "AI/ML Челлендж",
+                description: "Разработайте модель машинного обучения для предсказания рыночных трендов.",
+                detailedDescription: "Соревнование по машинному обучению для анализа финансовых данных. Участники получат доступ к уникальному датасету и должны будут создать модель с наилучшей точностью предсказаний.",
+                prize: "1 место: 50,000 ₽ + стажировка",
+                rules: [
+                    "Индивидуальное или командное участие (до 3 человек)",
+                    "Использование только предоставленного датасета",
+                    "Предоставление полного кода на GitHub",
+                    "Документация решения обязательна"
+                ],
+                deadline: "2024-07-20",
+                startDate: "2024-07-01",
+                status: "upcoming",
+                participants: 45,
+                maxParticipants: 100
+            }
+        ];
+
+        // Текущий выбранный конкурс
+        let currentCompetition = null;
+
+        // Загрузка списка конкурсов
+        function loadCompetitions() {
+            const container = document.getElementById('competitionList');
+            const loader = document.getElementById('mainLoader');
+            
+            loader.style.display = 'none';
+            
+            if (competitions.length === 0) {
+                container.innerHTML = `
+                    <div class="no-competitions">
+                        <h3>😔 Конкурсов пока нет</h3>
+                        <p>Новые конкурсы появятся скоро. Следите за обновлениями!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = competitions.map(comp => `
+                <div class="competition-card" onclick="showCompetitionDetail(${comp.id})">
+                    <h3>${comp.title}</h3>
+                    <p>${comp.description}</p>
+                    <div class="competition-meta">
+                        <span>📅 До ${formatDate(comp.deadline)}</span>
+                        <span>👥 ${comp.participants}/${comp.maxParticipants}</span>
+                    </div>
+                    <span class="status ${comp.status}">
+                        ${getStatusText(comp.status)}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // Показать детали конкурса
+        function showCompetitionDetail(id) {
+            currentCompetition = competitions.find(c => c.id === id);
+            
+            document.getElementById('mainPage').style.display = 'none';
+            document.getElementById('detailPage').style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+
+            const detailContainer = document.getElementById('competitionDetail');
+            const loader = document.getElementById('detailLoader');
+            
+            loader.style.display = 'none';
+
+            detailContainer.innerHTML = `
+                <div class="detail-header">
+                    <h1>${currentCompetition.title}</h1>
+                    <div class="prize">🏆 ${currentCompetition.prize}</div>
+                    <div class="competition-meta">
+                        <span>📅 Начало: ${formatDate(currentCompetition.startDate)}</span>
+                        <span>⏰ Дедлайн: ${formatDate(currentCompetition.deadline)}</span>
+                        <span>👥 Участники: ${currentCompetition.participants}/${currentCompetition.maxParticipants}</span>
+                    </div>
+                    <span class="status ${currentCompetition.status}">
+                        ${getStatusText(currentCompetition.status)}
+                    </span>
+                </div>
+
+                <div class="description">
+                    <h3>📝 Описание конкурса</h3>
+                    <p>${currentCompetition.detailedDescription}</p>
+                </div>
+
+                <div class="rules">
+                    <h3>📋 Правила участия</h3>
+                    <ul>
+                        ${currentCompetition.rules.map(rule => `<li>${rule}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="registration-form" id="registrationForm">
+                    <h3>📝 Регистрация на конкурс</h3>
+                    <div class="form-group">
+                        <label for="userName">Ваше имя и фамилия *</label>
+                        <input type="text" id="userName" placeholder="Иван Иванов" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail">Email *</label>
+                        <input type="email" id="userEmail" placeholder="ivan@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userTelegram">Telegram username</label>
+                        <input type="text" id="userTelegram" placeholder="@username">
+                    </div>
+                    <div class="form-group">
+                        <label for="userMessage">Дополнительная информация</label>
+                        <textarea id="userMessage" placeholder="Расскажите о своем опыте или идеях..."></textarea>
+                    </div>
+                    
+                    ${currentCompetition.status === 'active' ? `
+                        <button class="btn" onclick="registerForCompetition()" id="registerBtn">
+                            Зарегистрироваться
+                        </button>
+                    ` : `
+                        <button class="btn" disabled>
+                            ${currentCompetition.status === 'ended' ? 'Регистрация закрыта' : 'Регистрация скоро откроется'}
+                        </button>
+                    `}
+                </div>
+            `;
+        }
+
+        // Регистрация на конкурс
+        function registerForCompetition() {
+            const userName = document.getElementById('userName').value;
+            const userEmail = document.getElementById('userEmail').value;
+            const userTelegram = document.getElementById('userTelegram').value;
+            const userMessage = document.getElementById('userMessage').value;
+            const registerBtn = document.getElementById('registerBtn');
+
+            // Валидация
+            if (!userName || !userEmail) {
+                alert('Пожалуйста, заполните обязательные поля');
+                return;
+            }
+
+            // Блокируем кнопку
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Регистрируем...';
+
+            // Имитация отправки данных на сервер
+            setTimeout(() => {
+                // В реальном приложении здесь будет fetch запрос к API
+                console.log('Регистрация отправлена:', {
+                    competitionId: currentCompetition.id,
+                    userName,
+                    userEmail,
+                    userTelegram,
+                    userMessage,
+                    telegramData: tg.initDataUnsafe // Данные Telegram пользователя
+                });
+
+                // Показываем сообщение об успехе
+                document.getElementById('registrationForm').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+                
+                // Обновляем количество участников
+                currentCompetition.participants++;
+                
+                // Можно отправить данные в бота
+                if (tg.sendData) {
+                    const data = {
+                        action: 'register',
+                        competitionId: currentCompetition.id,
+                        userName: userName,
+                        userEmail: userEmail
+                    };
+                    tg.sendData(JSON.stringify(data));
+                }
+            }, 1500);
+        }
+
+        // Вспомогательные функции
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'active': 'Идет регистрация',
+                'ended': 'Завершен',
+                'upcoming': 'Скоро начнется'
+            };
+            return statusMap[status] || status;
+        }
+
+        function goBack() {
+            document.getElementById('detailPage').style.display = 'none';
+            document.getElementById('mainPage').style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCompetitions();
+            
+            // Если есть данные Telegram пользователя, можно их использовать
+            if (tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                console.log('Telegram пользователь:', user);
+            }
+        });
+
+        // Обработка событий Telegram WebApp
+        tg.onEvent('viewportChanged', () => {
+            tg.expand();
+        });
+    </script>
+</body>
+</html>
