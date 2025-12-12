@@ -890,7 +890,7 @@
 
             let isAdmin = false;
     
-            //isAdmin = ADMIN_USER_IDS.includes(currentUser.id);
+            isAdmin = ADMIN_USER_IDS.includes(currentUser.id);
     
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
                 try {
@@ -1046,6 +1046,7 @@
     </script>
 </body>
 </html>
+
 
 
 
