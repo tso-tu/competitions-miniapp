@@ -50,7 +50,7 @@
             padding: 12px;
             border-radius: 12px;
             margin-bottom: 16px;
-            display: none !important;
+            display: none;
         }
 
         .competition-list {
@@ -440,22 +440,25 @@
         // ===================== ИНИЦИАЛИЗАЦИЯ =====================
         document.addEventListener('DOMContentLoaded', async () => {
             try {
+                // Сразу скрываем панель администратора
+                document.getElementById('adminPanel').style.display = 'none';
+        
                 // Инициализация Telegram WebApp
                 if (window.Telegram && window.Telegram.WebApp) {
                     tg = window.Telegram.WebApp;
                     tg.expand();
                     tg.ready();
-                    
+            
                     // Получаем данные пользователя
                     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                        currentUser = tg.initDataUnsafe.user;
-                        console.log('Текущий пользователь:', currentUser);
-                        
-                        // Проверяем, является ли пользователь администратором
-                        await checkIfAdmin();
-                        
-                        // Загружаем профиль пользователя
-                        loadUserProfile();
+                    currentUser = tg.initDataUnsafe.user;
+                    console.log('Текущий пользователь:', currentUser);
+                
+                    // СНАЧАЛА загружаем профиль
+                    loadUserProfile();
+                
+                    // ПОТОМ проверяем админские права
+                    await checkIfAdmin();
                     }
                 } else {
                     // Режим тестирования (без Telegram)
@@ -466,17 +469,21 @@
                         last_name: 'Пользователь',
                         username: 'test_user'
                     };
-                    
+            
                     // Для тестирования создаем тестовые данные
                     initializeTestData();
                     loadUserProfile();
+            
+                    // Для тестирования админа
+                    if (window.location.search.includes('admin=true')) {
+                    currentUser.id = ADMIN_USER_IDS[0]; // Делаем тестового пользователя админом
+                    await checkIfAdmin();
+                    }
                 }
-                
+        
                 // Загружаем данные
                 await loadData();
                 loadCompetitions();
-
-                document.getElementById('adminPanel').style.display = 'none';
                 
             } catch (error) {
                 console.error('Ошибка инициализации:', error);
@@ -876,8 +883,11 @@
         // ===================== АДМИНИСТРАТИВНЫЕ ФУНКЦИИ =====================
         
         async function checkIfAdmin() {
-            if (!currentUser) return false;
-    
+            if (!currentUser) {
+                document.getElementById('adminPanel').style.display = 'none';
+                return false;
+            }
+
             let isAdmin = false;
     
             //isAdmin = ADMIN_USER_IDS.includes(currentUser.id);
@@ -1036,6 +1046,7 @@
     </script>
 </body>
 </html>
+
 
 
 
