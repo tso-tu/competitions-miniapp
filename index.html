@@ -889,10 +889,10 @@
             const data = await response.json();
 
             const isAdmin = data.result.status === 'creator' || data.result.status === 'administrator';*/
-            
+            isAdmin = true;
             // Показываем/скрываем панель администратора
             const adminPanel = document.getElementById('adminPanel');
-            if (isAdmin && adminPanel) {
+            if (isAdmin) {
                 adminPanel.style.display = 'block';
             }
             
@@ -1034,5 +1034,6 @@
     </script>
 </body>
 </html>
+
 
 
