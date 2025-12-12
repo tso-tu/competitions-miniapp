@@ -895,7 +895,7 @@
     
             isAdmin = ADMIN_USER_IDS.includes(currentUser.id);
     
-            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
+            /*if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
                 try {
                     const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
                     const chatId = tg.initDataUnsafe.chat.id;
@@ -907,7 +907,7 @@
                 } catch (error) {
                     console.error('Ошибка проверки администратора:', error);
                 }
-            }
+            }*/
     
             // Показываем/скрываем панель администратора
             const adminPanel = document.getElementById('adminPanel');
@@ -1049,6 +1049,7 @@
     </script>
 </body>
 </html>
+
 
 
 
