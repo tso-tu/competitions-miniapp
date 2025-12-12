@@ -452,7 +452,7 @@
                         console.log('Текущий пользователь:', currentUser);
                         
                         // Проверяем, является ли пользователь администратором
-                        checkIfAdmin();
+                        await checkIfAdmin();
                         
                         // Загружаем профиль пользователя
                         loadUserProfile();
@@ -873,30 +873,38 @@
 
         // ===================== АДМИНИСТРАТИВНЫЕ ФУНКЦИИ =====================
         
-        function checkIfAdmin() {
+        async function checkIfAdmin() {
             if (!currentUser) return false;
+    
+            let isAdmin = false;
+    
+            // Способ 1: Проверка по ID (для тестирования)
+            isAdmin = ADMIN_USER_IDS.includes(currentUser.id);
+    
+            // Способ 2: Проверка через Telegram API (для реального использования)
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
+                try {
+                    const BOT_TOKEN = "ВАШ_BOT_TOKEN";
+                    const chatId = tg.initDataUnsafe.chat.id;
+                    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${currentUser.id}`);
+                    const data = await response.json();
             
-            // Проверяем, является ли пользователь администратором
-            // В реальном приложении здесь должна быть проверка через Telegram API
-            const isAdmin = ADMIN_USER_IDS.includes(currentUser.id));
-            /*if (tg.initDataUnsafe.chat) {
-                const chatId = tg.initDataUnsafe.chat.id;
-            }*/
-
-            /*const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
-            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${currentUser.id}`);
-            const data = await response.json();
-
-            const isAdmin = data.result.status === 'creator' || data.result.status === 'administrator';*/
-            //isAdmin = true;
+                    isAdmin = data.result && (data.result.status === 'creator' || data.result.status === 'administrator');
+            
+                } catch (error) {
+                    console.error('Ошибка проверки администратора:', error);
+                }
+            }
+    
             // Показываем/скрываем панель администратора
             const adminPanel = document.getElementById('adminPanel');
             if (isAdmin) {
-                adminPanel.style.display = 'none';
+            adminPanel.style.display = 'block'; // ПОКАЗЫВАЕМ панель
+            } else {
+            adminPanel.style.display = 'none'; // СКРЫВАЕМ панель
             }
-            
+    
             return isAdmin;
-
         }
 
         function addNewCompetition() {
@@ -1028,6 +1036,7 @@
     </script>
 </body>
 </html>
+
 
 
 
