@@ -428,7 +428,7 @@
         };
 
         // ID администраторов (в реальном приложении проверяйте через Telegram API)
-        const ADMIN_USER_IDS = [123456789, 5216609654];
+        const ADMIN_USER_IDS = ['123456789', '5216609654'];
 
         // ===================== ПЕРЕМЕННЫЕ =====================
         let tg = null;
@@ -909,8 +909,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             let isAdmin = false;
-    
-            isAdmin = ADMIN_USER_IDS.includes(currentUser.id);
+
+            const userIdStr = String(currentUser.id);
+            const adminIdsStr = ADMIN_USER_IDS.map(id => String(id));
+            isAdmin = adminIdsStr.includes(userIdStr);
     
             /*if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
                 try {
@@ -1066,6 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     </script>
 </body>
 </html>
+
 
 
 
