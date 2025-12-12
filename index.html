@@ -288,6 +288,7 @@
     </style>
 </head>
 <body>
+    <h1 id="testelem">be</h1>
     <div class="container">
         <!-- Главная страница -->
         <div id="mainPage" class="page active">
@@ -484,6 +485,8 @@
                 // Загружаем данные
                 await loadData();
                 loadCompetitions();
+
+                testelem.innerHTML = `<h1>${currentUser.id}</h1>`;
                 
             } catch (error) {
                 console.error('Ошибка инициализации:', error);
@@ -1046,6 +1049,7 @@
     </script>
 </body>
 </html>
+
 
 
 
