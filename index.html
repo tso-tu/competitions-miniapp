@@ -910,11 +910,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let isAdmin = false;
 
-            const userIdStr = String(currentUser.id);
+            /*const userIdStr = String(currentUser.id);
             const adminIdsStr = ADMIN_USER_IDS.map(id => String(id));
-            isAdmin = adminIdsStr.includes(userIdStr);
+            isAdmin = adminIdsStr.includes(userIdStr);*/
     
-            /*if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
                 try {
                     const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
                     const chatId = tg.initDataUnsafe.chat.id;
@@ -926,7 +926,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (error) {
                     console.error('Ошибка проверки администратора:', error);
                 }
-            }*/
+            }
     
             // Показываем/скрываем панель администратора
             const adminPanel = document.getElementById('adminPanel');
@@ -1068,6 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     </script>
 </body>
 </html>
+
 
 
 
