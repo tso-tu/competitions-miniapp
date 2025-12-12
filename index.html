@@ -427,7 +427,7 @@
         };
 
         // ID администраторов (в реальном приложении проверяйте через Telegram API)
-        const ADMIN_USER_IDS = [123456789, 987654321];
+        const ADMIN_USER_IDS = [123456789, 5216609654];
 
         // ===================== ПЕРЕМЕННЫЕ =====================
         let tg = null;
@@ -878,17 +878,17 @@
             
             // Проверяем, является ли пользователь администратором
             // В реальном приложении здесь должна быть проверка через Telegram API
-            /*const isAdmin = ADMIN_USER_IDS.includes(currentUser.id) || 
-                          (currentUser.username && currentUser.username.includes('admin'));*/
+            const isAdmin = ADMIN_USER_IDS.includes(currentUser.id) || 
+                          (currentUser.username && currentUser.username.includes('admin'));
             if (tg.initDataUnsafe.chat) {
                 const chatId = tg.initDataUnsafe.chat.id;
             }
 
-            const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
+            /*const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
             const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${currentUser.id}`);
             const data = await response.json();
 
-            const isAdmin = data.result.status === 'creator' || data.result.status === 'administrator';
+            const isAdmin = data.result.status === 'creator' || data.result.status === 'administrator';*/
             
             // Показываем/скрываем панель администратора
             const adminPanel = document.getElementById('adminPanel');
@@ -1034,4 +1034,5 @@
     </script>
 </body>
 </html>
+
 
