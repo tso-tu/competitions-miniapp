@@ -442,10 +442,24 @@
             try {
                 // Сразу скрываем панель администратора
                 document.getElementById('adminPanel').style.display = 'none';
+
+                function waitForTelegram() {
+                    return new Promise((resolve) => {
+                        const check = () => {
+                        // Проверяем не просто наличие объекта, а его метод ready
+                        if (window.Telegram?.WebApp?.initDataUnsafe) {
+                            resolve(window.Telegram.WebApp);
+                        } else {
+                            setTimeout(check, 50); // Проверяем каждые 50 мс
+                        }
+                        };
+                        check();
+                    });
+                }
         
                 // Инициализация Telegram WebApp
                 if (window.Telegram && window.Telegram.WebApp) {
-                    tg = window.Telegram.WebApp;
+                    tg = await waitForTelegram();
                     tg.expand();
                     tg.ready();
             
@@ -1048,6 +1062,7 @@
     </script>
 </body>
 </html>
+
 
 
 
