@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Конкурсы</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
@@ -438,74 +439,77 @@
         let userProfile = null;
 
         // ===================== ИНИЦИАЛИЗАЦИЯ =====================
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // Сразу скрываем панель администратора
-                document.getElementById('adminPanel').style.display = 'none';
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 1. Сразу скрываем панель администратора
+        document.getElementById('adminPanel').style.display = 'none';
 
-                function waitForTelegram() {
-                    return new Promise((resolve) => {
-                        const check = () => {
-                        // Проверяем не просто наличие объекта, а его метод ready
-                        if (window.Telegram?.WebApp?.initDataUnsafe) {
-                            resolve(window.Telegram.WebApp);
-                        } else {
-                            setTimeout(check, 50); // Проверяем каждые 50 мс
-                        }
-                        };
-                        check();
-                    });
+        // 2. Функция ожидания готовности Telegram WebApp
+        async function waitForTelegramWebApp(maxAttempts = 30, interval = 100) {
+            for (let i = 0; i < maxAttempts; i++) {
+                if (window.Telegram?.WebApp?.initDataUnsafe !== undefined) {
+                    console.log('Telegram WebApp SDK готов!');
+                    return window.Telegram.WebApp;
                 }
-        
-                // Инициализация Telegram WebApp
-                if (window.Telegram && window.Telegram.WebApp) {
-                    tg = await waitForTelegram();
-                    tg.expand();
-                    tg.ready();
-            
-                    // Получаем данные пользователя
-                    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                    currentUser = tg.initDataUnsafe.user;
-                    console.log('Текущий пользователь:', currentUser);
-                
-                    // СНАЧАЛА загружаем профиль
-                    loadUserProfile();
-                
-                    // ПОТОМ проверяем админские права
-                    await checkIfAdmin();
-                    }
-                } else {
-                    // Режим тестирования (без Telegram)
-                    console.log('Режим тестирования (без Telegram WebApp)');
-                    currentUser = {
-                        id: Math.floor(Math.random() * 1000000),
-                        first_name: 'Тестовый',
-                        last_name: 'Пользователь',
-                        username: 'test_user'
-                    };
-            
-                    // Для тестирования создаем тестовые данные
-                    initializeTestData();
-                    loadUserProfile();
-            
-                    // Для тестирования админа
-                    if (window.location.search.includes('admin=true')) {
-                    currentUser.id = ADMIN_USER_IDS[0]; // Делаем тестового пользователя админом
-                    await checkIfAdmin();
-                    }
-                }
-        
-                // Загружаем данные
-                await loadData();
-                loadCompetitions();
-
-                testelem.innerHTML = `<h1>${currentUser.id}</h1>`;
-                
-            } catch (error) {
-                console.error('Ошибка инициализации:', error);
-                showError('Ошибка загрузки приложения');
+                await new Promise(resolve => setTimeout(resolve, interval));
             }
-        });
+            throw new Error('Telegram WebApp SDK не загрузился за отведенное время');
+        }
+
+        // 3. Пытаемся загрузить Telegram WebApp
+        try {
+            // Ждем инициализации
+            tg = await waitForTelegramWebApp();
+            tg.expand();
+            tg.ready();
+            
+            // Получаем данные пользователя
+            if (tg.initDataUnsafe?.user) {
+                currentUser = tg.initDataUnsafe.user;
+                console.log('✅ Режим Telegram. Пользователь:', currentUser);
+                
+                // Загружаем профиль и проверяем админские права
+                loadUserProfile();
+                await checkIfAdmin();
+            } else {
+                throw new Error('Данные пользователя Telegram не получены');
+            }
+            
+        } catch (telegramError) {
+            // 4. Режим тестирования, если Telegram не загрузился
+            console.warn('Режим тестирования (без Telegram WebApp):', telegramError.message);
+            currentUser = {
+                id: Math.floor(Math.random() * 1000000),
+                first_name: 'Тестовый',
+                last_name: 'Пользователь',
+                username: 'test_user'
+            };
+            
+            initializeTestData();
+            loadUserProfile();
+            
+            // Для тестирования админа через URL
+            if (window.location.search.includes('admin=true')) {
+                currentUser.id = ADMIN_USER_IDS[0];
+                await checkIfAdmin();
+            }
+        }
+
+        // 5. Загружаем данные и конкурсы (в любом режиме)
+        await loadData();
+        loadCompetitions();
+        
+        // 6. Отображаем ID для отладки (если элемент существует)
+        const testElem = document.getElementById('testelem');
+        if (testElem) {
+            testElem.innerHTML = `<h1>Режим: ${tg ? 'Telegram' : 'Тест'}. ID: ${currentUser.id}</h1>`;
+        }
+                
+    } catch (error) {
+        console.error('Критическая ошибка инициализации:', error);
+        showError('Ошибка загрузки приложения');
+    }
+});
 
         // ===================== ФУНКЦИИ ДЛЯ РАБОТЫ С "БАЗОЙ ДАННЫХ" =====================
         // В реальном приложении замените эти функции на API вызовы
@@ -1062,6 +1066,7 @@
     </script>
 </body>
 </html>
+
 
 
 
