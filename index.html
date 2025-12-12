@@ -45,12 +45,12 @@
         }
 
         .admin-panel {
+            display: none;
             background: #ff6b6b;
             color: white;
             padding: 12px;
             border-radius: 12px;
             margin-bottom: 16px;
-            display: none;
         }
 
         .competition-list {
@@ -909,9 +909,9 @@
             // Показываем/скрываем панель администратора
             const adminPanel = document.getElementById('adminPanel');
             if (isAdmin) {
-            adminPanel.style.display = 'block'; // ПОКАЗЫВАЕМ панель
+                //adminPanel.style.display = 'block'; // ПОКАЗЫВАЕМ панель
             } else {
-            adminPanel.style.display = 'none'; // СКРЫВАЕМ панель
+                adminPanel.style.display = 'none'; // СКРЫВАЕМ панель
             }
     
             return isAdmin;
@@ -1046,6 +1046,7 @@
     </script>
 </body>
 </html>
+
 
 
 
