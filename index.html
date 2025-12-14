@@ -901,8 +901,80 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // ===================== АДМИНИСТРАТИВНЫЕ ФУНКЦИИ =====================
-        
+
         async function checkIfAdmin() {
+            if (!currentUser) {
+                document.getElementById('adminPanel').style.display = 'none';
+                return false;
+            }
+
+            let isAdmin = false;
+            const userId = currentUser.id;
+
+            // Проверка через прямой список администраторов (для тестирования)
+            const userIdStr = String(userId);
+            const adminIdsStr = ADMIN_USER_IDS.map(id => String(id));
+            isAdmin = adminIdsStr.includes(userIdStr);
+
+            // Если это Telegram WebApp, проверяем права администратора в чате
+            if (tg && tg.initDataUnsafe) {
+                try {
+                    const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
+            
+                    // Получаем chat_id из initDataUnsafe
+                    // В групповом чате может быть chat, chat_type, chat_instance
+                    let chatId = null;
+            
+                    // Попробуем разные способы получить chat_id
+                    if (tg.initDataUnsafe.chat) {
+                        chatId = tg.initDataUnsafe.chat.id;
+                    } else if (tg.initDataUnsafe.chat_id) {
+                        chatId = tg.initDataUnsafe.chat_id;
+                    } else if (tg.initDataUnsafe.chat_instance) {
+                        // Для некоторых групповых чатов
+                        chatId = tg.initDataUnsafe.chat_instance;
+                    }
+            
+                    if (chatId) {
+                        const response = await fetch(
+                            `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`,
+                            {
+                                method: 'GET'
+                            }
+                        );
+                
+                        const data = await response.json();
+                
+                        if (data.ok && data.result) {
+                            const status = data.result.status;
+                            isAdmin = status === 'creator' || status === 'administrator';
+                            console.log(`Статус пользователя в чате: ${status}, isAdmin: ${isAdmin}`);
+                        } else {
+                            console.warn('Не удалось получить статус пользователя:', data);
+                        }
+                        } else {
+                            console.log('chat_id не найден в initDataUnsafe:', tg.initDataUnsafe);
+                        }
+            
+                } catch (error) {
+                    console.error('Ошибка проверки администратора:', error);
+                }
+            }
+
+            // Показываем/скрываем панель администратора
+            const adminPanel = document.getElementById('adminPanel');
+            if (isAdmin) {
+                adminPanel.style.display = 'block';
+                console.log('Панель администратора отображается');
+            } else {
+                adminPanel.style.display = 'none';
+                console.log('Панель администратора скрыта');
+            }
+
+            return isAdmin;
+        }
+        
+        /*async function checkIfAdmin() {
             if (!currentUser) {
                 document.getElementById('adminPanel').style.display = 'none';
                 return false;
@@ -912,7 +984,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             /*const userIdStr = String(currentUser.id);
             const adminIdsStr = ADMIN_USER_IDS.map(id => String(id));
-            isAdmin = adminIdsStr.includes(userIdStr);*/
+            isAdmin = adminIdsStr.includes(userIdStr);
     
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
                 try {
@@ -948,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
     
             return isAdmin;
-        }
+        }*/
 
         function addNewCompetition() {
             
@@ -1079,6 +1151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     </script>
 </body>
 </html>
+
 
 
 
