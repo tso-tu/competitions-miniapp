@@ -918,7 +918,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
                     const chatId = tg.initDataUnsafe.chat.id;
-                    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${currentUser.id}`);
+                    //const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${currentUser.id}`);
+
+                     const response = await fetch(
+                        `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`,
+                        {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+                    
                     const data = await response.json();
             
                     isAdmin = data.result && (data.result.status === 'creator' || data.result.status === 'administrator');
@@ -1068,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     </script>
 </body>
 </html>
+
 
 
 
