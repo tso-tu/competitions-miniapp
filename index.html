@@ -259,7 +259,12 @@
             margin-bottom: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-		        .file-upload {
+
+        .profile-info p {
+            margin-bottom: 10px;
+        }
+
+        .file-upload {
             border: 2px dashed #ddd;
             padding: 30px;
             text-align: center;
@@ -292,14 +297,12 @@
                 <p>Участвуйте в конкурсах и выигрывайте призы!</p>
             </div>
 
-
             <div id="adminPanel" class="admin-panel">
                 <h3>Панель администратора</h3>
                 <button class="btn btn-admin" onclick="showPage('addCompetitionPage')">
                     ➕ Добавить новый конкурс
                 </button>
             </div>
-
 
             <div id="competitionList" class="competition-list">
                 <div class="loader" id="mainLoader">
@@ -320,7 +323,6 @@
             <button class="back-button" onclick="showPage('mainPage')">
                 ← Назад к списку
             </button>
-
 
             <div id="competitionDetail">
                 <!-- Детали будут загружены динамически -->
@@ -428,7 +430,6 @@
         // ID администраторов (в реальном приложении проверяйте через Telegram API)
         const ADMIN_USER_IDS = ['123456789', '5216609653'];
 
-
         // ===================== ПЕРЕМЕННЫЕ =====================
         let tg = null;
         let currentUser = null;
@@ -439,67 +440,199 @@
 
         // ===================== ИНИЦИАЛИЗАЦИЯ =====================
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // 1. Сразу скрываем панель администратора
-                document.getElementById('adminPanel').style.display = 'none';
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 1. Сразу скрываем панель администратора
+        document.getElementById('adminPanel').style.display = 'none';
 
-                // 2. Функция ожидания готовности Telegram WebApp
-                async function waitForTelegramWebApp(maxAttempts = 30, interval = 100) {
-                    for (let i = 0; i < maxAttempts; i++) {
-                        if (window.Telegram?.WebApp?.initDataUnsafe !== undefined) {
-                            console.log('Telegram WebApp SDK готов!');
-                            return window.Telegram.WebApp;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, interval));
-                    }
-                    throw new Error('Telegram WebApp SDK не загрузился за отведённое время');
+        // 2. Функция ожидания готовности Telegram WebApp
+        async function waitForTelegramWebApp(maxAttempts = 30, interval = 100) {
+            for (let i = 0; i < maxAttempts; i++) {
+                if (window.Telegram?.WebApp?.initDataUnsafe !== undefined) {
+                    console.log('Telegram WebApp SDK готов!');
+                    return window.Telegram.WebApp;
                 }
-
-                // 3. Пытаемся загрузить Telegram WebApp
-                try {
-                    // Ждём инициализации
-                    tg = await waitForTelegramWebApp();
-                    tg.expand();
-                    tg.ready();
-
-                    // Получаем данные пользователя
-                    if (tg.initDataUnsafe?.user) {
-                        currentUser = tg.initDataUnsafe.user;
-                        console.log('✅ Режим Telegram. Пользователь:', currentUser);
-						                        // Проверяем, является ли пользователь администратором
-                        checkIfAdmin();
-
-                        // Загружаем данные
-                        loadData();
-                    } else {
-                        showError('Не удалось получить данные пользователя из Telegram');
-                    }
-                } catch (error) {
-                    console.error('Ошибка при инициализации Telegram WebApp:', error);
-                    showError('Не удалось подключиться к Telegram. Проверьте подключение и перезагрузите страницу.');
-                }
-            } catch (error) {
-                console.error('Критическая ошибка при загрузке:', error);
-                showError('Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.');
+                await new Promise(resolve => setTimeout(resolve, interval));
             }
-        });
+            throw new Error('Telegram WebApp SDK не загрузился за отведенное время');
+        }
 
-        // ===================== ОСНОВНЫЕ ФУНКЦИИ =====================
+        // 3. Пытаемся загрузить Telegram WebApp
+        try {
+            // Ждем инициализации
+            tg = await waitForTelegramWebApp();
+            tg.expand();
+            tg.ready();
+            
+            // Получаем данные пользователя
+            if (tg.initDataUnsafe?.user) {
+                currentUser = tg.initDataUnsafe.user;
+                console.log('✅ Режим Telegram. Пользователь:', currentUser);
+                
+                // Загружаем профиль и проверяем админские права
+                loadUserProfile();
+                await checkIfAdmin();
+            } else {
+                throw new Error('Данные пользователя Telegram не получены');
+            }
+            
+        } catch (telegramError) {
+            // 4. Режим тестирования, если Telegram не загрузился
+            console.warn('Режим тестирования (без Telegram WebApp):', telegramError.message);
+            currentUser = {
+                id: Math.floor(Math.random() * 1000000),
+                first_name: 'Тестовый',
+                last_name: 'Пользователь',
+                username: 'test_user'
+            };
+            
+            initializeTestData();
+            loadUserProfile();
+            
+            // Для тестирования админа через URL
+            if (window.location.search.includes('admin=true')) {
+                currentUser.id = ADMIN_USER_IDS[0];
+                await checkIfAdmin();
+            }
+        }
 
+        // 5. Загружаем данные и конкурсы (в любом режиме)
+        await loadData();
+        loadCompetitions();
+        
+        // 6. Отображаем ID для отладки (если элемент существует)
+        const testElem = document.getElementById('testelem');
+        if (testElem) {
+            testElem.innerHTML = `<h1>Режим: ${tg ? 'Telegram' : 'Тест'}. ID: ${currentUser.id}</h1>`;
+        }
+                
+    } catch (error) {
+        console.error('Критическая ошибка инициализации:', error);
+        showError('Ошибка загрузки приложения');
+    }
+});
 
+        // ===================== ФУНКЦИИ ДЛЯ РАБОТЫ С "БАЗОЙ ДАННЫХ" =====================
+        // В реальном приложении замените эти функции на API вызовы
+        
+        function saveToDB(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (error) {
+                console.error('Ошибка сохранения в DB:', error);
+                return false;
+            }
+        }
+
+        function loadFromDB(key) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : [];
+            } catch (error) {
+                console.error('Ошибка загрузки из DB:', error);
+                return [];
+            }
+        }
+
+        async function loadData() {
+            competitions = loadFromDB(DB_CONFIG.competitionsKey);
+            registrations = loadFromDB(DB_CONFIG.registrationsKey);
+            
+            // Если нет конкурсов, создаем демо-данные
+            if (competitions.length === 0) {
+                createDemoCompetitions();
+            }
+        }
+
+        function createDemoCompetitions() {
+            competitions = [
+                {
+                    id: 1,
+                    title: "Хакатон по Веб-Разработке 2024",
+                    shortDescription: "Создайте инновационное веб-приложение за 48 часов",
+                    description: "Приглашаем разработчиков всех уровней принять участие в нашем ежегодном хакатоне. Тема этого года - 'Инновации в образовательных технологиях'. Участникам предстоит создать веб-приложение, которое решает актуальные проблемы в сфере образования.",
+                    rules: [
+                        "Команды от 2 до 5 человек",
+                        "Использование любых технологий разрешено",
+                        "Проект должен быть открытым исходным кодом",
+                        "Презентация проекта в финальный день"
+                    ],
+                    startDate: "2024-06-01",
+                    endDate: "2024-06-15",
+                    prize: "Главный приз: 100,000 ₽",
+                    status: "active",
+                    createdAt: new Date().toISOString(),
+                    createdBy: "admin"
+                },
+                {
+                    id: 2,
+                    title: "Конкурс Дизайна UI/UX",
+                    shortDescription: "Создайте лучший пользовательский интерфейс",
+                    description: "Конкурс направлен на поиск талантливых дизайнеров, способных создавать интуитивно понятные и красивые интерфейсы.",
+                    rules: [
+                        "Индивидуальное участие",
+                        "Предоставление полного набора экранов",
+                        "Использование Figma обязательно"
+                    ],
+                    startDate: "2024-05-01",
+                    endDate: "2024-05-30",
+                    prize: "Призовой фонд: 75,000 ₽",
+                    status: "active",
+                    createdAt: new Date().toISOString(),
+                    createdBy: "admin"
+                }
+            ];
+            
+            saveToDB(DB_CONFIG.competitionsKey, competitions);
+        }
+
+        function initializeTestData() {
+            // Инициализируем тестовые данные для режима тестирования
+            if (localStorage.getItem('test_data_initialized') !== 'true') {
+                createDemoCompetitions();
+                localStorage.setItem('test_data_initialized', 'true');
+            }
+        }
+
+        // ===================== ФУНКЦИИ ПОЛЬЗОВАТЕЛЬСКОГО ИНТЕРФЕЙСА =====================
+        
         function showPage(pageId) {
             // Скрываем все страницы
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
             });
+            
             // Показываем нужную страницу
-            const targetPage = document.getElementById(pageId);
-            if (targetPage) {
-                targetPage.classList.add('active');
-            }
-            // Скрываем сообщения об ошибках/успехе
+            document.getElementById(pageId).classList.add('active');
+            
+            // Скрываем сообщения
             hideMessages();
+            
+            // Если переходим на главную, обновляем список
+            if (pageId === 'mainPage') {
+                loadCompetitions();
+            }
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            document.getElementById('successText').textContent = message;
+            successDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
         }
 
         function hideMessages() {
@@ -507,156 +640,209 @@
             document.getElementById('errorMessage').style.display = 'none';
         }
 
-        function showSuccess(message) {
-            const successMsg = document.getElementById('successMessage');
-            document.getElementById('successText').textContent = message;
-            successMsg.style.display = 'block';
-            // Автоматически скрываем через 5 секунд
+        // ===================== РАБОТА С КОНКУРСАМИ =====================
+        
+        function loadCompetitions() {
+            const container = document.getElementById('competitionList');
+            const loader = document.getElementById('mainLoader');
+            
+            loader.style.display = 'block';
+            
             setTimeout(() => {
-                successMsg.style.display = 'none';
-            }, 5000);
-        }
-
-        function showError(message) {
-            const errorMsg = document.getElementById('errorMessage');
-            document.getElementById('errorText').textContent = message;
-            errorMsg.style.display = 'block';
-        }
-
-        async function checkIfAdmin() {
-            if (!currentUser || !currentUser.id) return;
-
-            try {
-                const isAdmin = ADMIN_USER_IDS.includes(currentUser.id.toString());
-                if (isAdmin) {
-                    document.getElementById('adminPanel').style.display = 'block';
+                loader.style.display = 'none';
+                
+                if (!competitions || competitions.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-competitions">
+                            <h3>😔 Конкурсов пока нет</h3>
+                            <p>Будьте первым, кто добавит конкурс!</p>
+                        </div>
+                    `;
+                    return;
                 }
-            } catch (error) {
-                console.error('Ошибка при проверке администратора:', error);
-            }
-        }
-
-        function loadData() {
-            try {
-                // Загружаем профили
-                const profilesStr = localStorage.getItem(DB_CONFIG.profilesKey);
-                if (profilesStr) {
-                    const profiles = JSON.parse(profilesStr);
-                    userProfile = profiles[currentUser.id] || null;
-                    updateProfileStatus();
-                }
-
-                // Загружаем конкурсы
-                const competitionsStr = localStorage.getItem(DB_CONFIG.competitionsKey);
-                competitions = competitionsStr ? JSON.parse(competitionsStr) : [];
-                renderCompetitions();
-
-                document.getElementById('mainLoader').style.display = 'none';
-
-            } catch (error) {
-                console.error('Ошибка при загрузке данных:', error);
-                showError('Не удалось загрузить данные. Проверьте соединение.');
-            }
-        }
-
-        function updateProfileStatus() {
-            const statusEl = document.getElementById('userProfileStatus');
-            if (userProfile) {
-                statusEl.textContent = `${userProfile.fullName} (${userProfile.group})`;
-            } else {
-                statusEl.textContent = 'Не заполнен';
-            }
-        }
-
-        function renderCompetitions() {
-            const listEl = document.getElementById('competitionList');
-            if (competitions.length === 0) {
-                listEl.innerHTML = `
-                    <div class="no-competitions">
-                        <p>Пока нет доступных конкурсов</p>
-                    </div>
-                `;
-                return;
-            }
-
-            listEl.innerHTML = '';
-            competitions.forEach(comp => {
-                const status = getCompetitionStatus(comp);
-                const card = document.createElement('div');
-                card.className = 'competition-card';
-                card.innerHTML = `
-                    <h3>${comp.title}</h3>
-                    <p>${comp.shortDesc}</p>
-                    <div class="competition-meta">
-                        <span>Начало: ${formatDate(comp.startDate)}</span>
-                        <span>Конец: ${formatDate(comp.endDate)}</span>
-                    </div>
-                    <span class="status ${status.toLowerCase()}">${status}</span>
-                `;
-                card.addEventListener('click', () => showCompetitionDetail(comp.id));
-                listEl.appendChild(card);
-            });
-        }
-
-        function getCompetitionStatus(competition) {
-            const now = new Date();
-            const startDate = new Date(competition.startDate);
-            const endDate = new Date(competition.endDate);
-
-            if (now < startDate) {
-                return 'Предстоящий';
-            } else if (now >= startDate && now <= endDate) {
-                return 'Активный';
-            } else {
-                return 'Завершён';
-            }
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ru-RU');
+                
+                // Сортируем конкурсы по дате (новые сверху)
+                const sortedCompetitions = [...competitions].sort((a, b) => {
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+                
+                container.innerHTML = sortedCompetitions.map(comp => {
+                    const status = getCompetitionStatus(comp);
+                    const statusText = getStatusText(status);
+                    const statusClass = status;
+                    
+                    return `
+                        <div class="competition-card" onclick="showCompetitionDetail(${comp.id})">
+                            <h3>${comp.title}</h3>
+                            <p>${comp.shortDescription}</p>
+                            <div class="competition-meta">
+                                <span>📅 ${formatDate(comp.startDate)} - ${formatDate(comp.endDate)}</span>
+                                ${comp.prize ? `<span>🏆 ${comp.prize}</span>` : ''}
+                            </div>
+                            <span class="status ${statusClass}">${statusText}</span>
+                        </div>
+                    `;
+                }).join('');
+            }, 500);
         }
 
         function showCompetitionDetail(competitionId) {
             currentCompetitionId = competitionId;
             const competition = competitions.find(c => c.id === competitionId);
+            
             if (!competition) {
                 showError('Конкурс не найден');
                 return;
             }
-
-            const detailEl = document.getElementById('competitionDetail');
-            detailEl.innerHTML = `
+            
+            const status = getCompetitionStatus(competition);
+            const statusText = getStatusText(status);
+            const statusClass = status;
+            
+            // Проверяем, зарегистрирован ли пользователь на этот конкурс
+            const isRegistered = checkIfRegistered(competitionId);
+            
+            let actionButton = '';
+            if (status === 'active') {
+                if (isRegistered) {
+                    actionButton = `
+                        <div class="registered-info">
+                            <h3>✅ Вы записались на этот конкурс</h3>
+                            <button class="btn btn-secondary" onclick="attachWork(${competitionId})">
+                                📎 Прикрепить работу
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionButton = `
+                        <button class="btn" onclick="registerForCompetition(${competitionId})">
+                            🚀 Поучаствовать
+                        </button>
+                    `;
+                }
+            } else if (status === 'upcoming') {
+                actionButton = `
+                    <button class="btn" disabled>
+                        ⏳ Регистрация скоро откроется
+                    </button>
+                `;
+            } else {
+                actionButton = `
+                    <button class="btn" disabled>
+                        🏁 Конкурс завершен
+                    </button>
+                `;
+            }
+            
+            const detailHtml = `
                 <div class="detail-header">
                     <h1>${competition.title}</h1>
-                    <p>${competition.shortDesc}</p>
+                    <div class="competition-meta">
+                        <span>📅 ${formatDate(competition.startDate)} - ${formatDate(competition.endDate)}</span>
+                        ${competition.prize ? `<span>🏆 ${competition.prize}</span>` : ''}
+                    </div>
+                    <span class="status ${statusClass}">${statusText}</span>
                 </div>
-
+                
                 <div class="description">
-                    <h3>Описание</h3>
+                    <h3>📝 Описание конкурса</h3>
                     <p>${competition.description}</p>
                 </div>
-
+                
                 <div class="rules">
-                    <h3>Правила участия</h3>
+                    <h3>📋 Правила участия</h3>
                     <ul>
-                        ${competition.rules.split('\n').filter(rule => rule.trim()).map(rule => `<li>${rule.trim()}</li>`).join('')}
+                        ${competition.rules.map(rule => `<li>${rule}</li>`).join('')}
                     </ul>
                 </div>
-
-                ${competition.prize ? `
-                <div class="prize">
-                    <h3>Призовой фонд</h3>
-                    <p>${competition.prize}</p>
-                </div>
-                ` : ''}
-
-                <button class="btn" onclick="registerForCompetition()">
-                    📋 Зарегистрироваться
-                </button>
+                
+                ${actionButton}
             `;
-
+            
+            document.getElementById('competitionDetail').innerHTML = detailHtml;
             showPage('detailPage');
+        }
+
+        // ===================== РЕГИСТРАЦИЯ НА КОНКУРС =====================
+        
+        function registerForCompetition(competitionId) {
+            // Проверяем, заполнен ли профиль
+            if (!userProfile || !userProfile.fullName) {
+                showError('Пожалуйста, сначала заполните ваш профиль');
+                showPage('profilePage');
+                return;
+            }
+            
+            // Проверяем, не зарегистрирован ли уже пользователь
+            if (checkIfRegistered(competitionId)) {
+                showError('Вы уже зарегистрированы на этот конкурс');
+                return;
+            }
+            
+            // Создаем запись о регистрации
+            const registration = {
+                id: Date.now(),
+                competitionId: competitionId,
+                userId: currentUser.id,
+                userData: userProfile,
+                registeredAt: new Date().toISOString(),
+                status: 'registered'
+            };
+            
+            // Добавляем в массив регистраций
+            registrations.push(registration);
+            
+            // Сохраняем в "базу данных"
+            saveToDB(DB_CONFIG.registrationsKey, registrations);
+            
+            showSuccess('Вы успешно зарегистрированы на конкурс!');
+            
+            // Обновляем отображение страницы конкурса
+            setTimeout(() => {
+                showCompetitionDetail(competitionId);
+            }, 1000);
+        }
+
+        function checkIfRegistered(competitionId) {
+            if (!currentUser || !registrations) return false;
+            return registrations.some(reg => 
+                reg.competitionId === competitionId && reg.userId === currentUser.id
+            );
+        }
+
+        function attachWork(competitionId) {
+            // В реальном приложении здесь будет загрузка файла
+            alert('Функция загрузки работы будет реализована в следующем обновлении');
+        }
+
+        // ===================== РАБОТА С ПРОФИЛЕМ =====================
+        
+        function loadUserProfile() {
+            if (!currentUser) return;
+            
+            // Загружаем профиль из базы данных
+            const profiles = loadFromDB(DB_CONFIG.profilesKey);
+            userProfile = profiles.find(p => p.userId === currentUser.id);
+            
+            // Обновляем статус профиля на главной странице
+            const profileStatus = document.getElementById('userProfileStatus');
+            if (userProfile && userProfile.fullName) {
+                profileStatus.textContent = `${userProfile.fullName} (${userProfile.group})`;
+                profileStatus.style.color = '#2e7d32';
+            } else {
+                profileStatus.textContent = 'Не заполнен';
+                profileStatus.style.color = '#c62828';
+            }
+            
+            // Если на странице профиля, заполняем поля
+            if (document.getElementById('profilePage').classList.contains('active')) {
+                if (userProfile) {
+                    document.getElementById('fullName').value = userProfile.fullName || '';
+                    document.getElementById('group').value = userProfile.group || '';
+                    document.getElementById('email').value = userProfile.email || '';
+                    document.getElementById('phone').value = userProfile.phone || '';
+                }
+            }
         }
 
         function saveProfile() {
@@ -664,48 +850,180 @@
             const group = document.getElementById('group').value.trim();
             const email = document.getElementById('email').value.trim();
             const phone = document.getElementById('phone').value.trim();
-
-
+            
             // Валидация
             if (!fullName || !group || !email) {
                 showError('Пожалуйста, заполните все обязательные поля');
                 return;
             }
-
+            
             if (!validateEmail(email)) {
-                showError('Некорректный формат email');
+                showError('Пожалуйста, введите корректный email');
                 return;
             }
-
-            userProfile = {
-                fullName,
-                group,
-                email,
-                phone: phone || null,
-                updatedAt: new Date().toISOString()
-            };
-
-            try {
-                const profilesStr = localStorage.getItem(DB_CONFIG.profilesKey) || '{}';
-                const profiles = JSON.parse(profilesStr);
-                profiles[currentUser.id] = userProfile;
-                localStorage.setItem(DB_CONFIG.profilesKey, JSON.stringify(profiles));
-
-                updateProfileStatus();
-                showSuccess('Профиль успешно сохранён');
-                showPage('mainPage');
-            } catch (error) {
-                console.error('Ошибка при сохранении профиля:', error);
-                showError('Не удалось сохранить профиль. Попробуйте ещё раз.');
+            
+            // Загружаем текущие профили
+            const profiles = loadFromDB(DB_CONFIG.profilesKey);
+            
+            // Удаляем старый профиль пользователя, если есть
+            const existingIndex = profiles.findIndex(p => p.userId === currentUser.id);
+            if (existingIndex !== -1) {
+                profiles.splice(existingIndex, 1);
             }
+            
+            // Создаем новый профиль
+            userProfile = {
+                userId: currentUser.id,
+                fullName: fullName,
+                group: group,
+                email: email,
+                phone: phone,
+                updatedAt: new Date().toISOString(),
+                telegramData: {
+                    username: currentUser.username,
+                    firstName: currentUser.first_name,
+                    lastName: currentUser.last_name
+                }
+            };
+            
+            // Добавляем в массив
+            profiles.push(userProfile);
+            
+            // Сохраняем
+            saveToDB(DB_CONFIG.profilesKey, profiles);
+            
+            showSuccess('Профиль успешно сохранен!');
+            
+            // Возвращаемся на главную страницу
+            setTimeout(() => {
+                showPage('mainPage');
+                loadUserProfile();
+            }, 1000);
         }
 
-        function validateEmail(email) {
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return re.test(String(email).toLowerCase());
+        // ===================== АДМИНИСТРАТИВНЫЕ ФУНКЦИИ =====================
+        async function checkIfAdmin() {
+    const adminPanel = document.getElementById('adminPanel');
+
+    // Сразу скрываем панель администратора
+    if (adminPanel) {
+        adminPanel.style.display = 'none';
+    }
+
+    // Проверяем наличие текущего пользователя и его ID
+    if (!currentUser || !currentUser.id) {
+        return false;
+    }
+
+    const userIdStr = String(currentUser.id);
+
+    // 1. Проверка по локальному списку администраторов
+    const isLocalAdmin = ADMIN_USER_IDS.some(id => String(id) === userIdStr);
+    if (isLocalAdmin) {
+        if (adminPanel) {
+            adminPanel.style.display = 'block';
         }
+        return true;
+    }
+
+    // 2. Проверка прав в Telegram-чате (если доступно)
+    if (window.Telegram?.WebApp?.initDataUnsafe?.chat) {
+        try {
+            const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
+            const chatId = window.Telegram.WebApp.initDataUnsafe.chat.id;
+
+            const response = await fetch(
+                `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        user_id: currentUser.id
+                    })
+                }
+            );
+
+            // Проверяем статус ответа
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Проверяем успешность запроса и наличие результата
+            if (data.ok && data.result) {
+                const status = data.result.status;
+                const isChatAdmin = status === 'creator' || status === 'administrator';
+
+                if (isChatAdmin && adminPanel) {
+                    adminPanel.style.display = 'block';
+                }
+                return isChatAdmin;
+            }
+
+        } catch (error) {
+            console.error('Ошибка при проверке прав администратора в чате:', error);
+            return false;
+        }
+    }
+
+    return false; // Если ни одно условие не выполнено
+}
+
+        
+        /*async function checkIfAdmin() {
+            if (!currentUser) {
+                document.getElementById('adminPanel').style.display = 'none';
+                return false;
+            }
+
+            let isAdmin = false;
+
+            /*const userIdStr = String(currentUser.id);
+            const adminIdsStr = ADMIN_USER_IDS.map(id => String(id));
+            isAdmin = adminIdsStr.includes(userIdStr);
+    
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat) {
+                try {
+                    const BOT_TOKEN = "8561259371:AAE_0kW6FM5hgpTByn3DwFeQ-KXwySCSrws";
+                    const chatId = tg.initDataUnsafe.chat.id;
+                    //const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${currentUser.id}`);
+
+                     const response = await fetch(
+                        `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`,
+                        {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+                    
+                    const data = await response.json();
+            
+                    isAdmin = data.result && (data.result.status === 'creator' || data.result.status === 'administrator');
+            
+                } catch (error) {
+                    console.error('Ошибка проверки администратора:', error);
+                }
+            }
+    
+            // Показываем/скрываем панель администратора
+            const adminPanel = document.getElementById('adminPanel');
+            if (isAdmin) {
+                adminPanel.style.display = 'block'; // ПОКАЗЫВАЕМ панель
+            } else {
+                adminPanel.style.display = 'none'; // СКРЫВАЕМ панель
+            }
+    
+            return isAdmin;
+        }*/
 
         function addNewCompetition() {
+            
             const title = document.getElementById('compTitle').value.trim();
             const startDate = document.getElementById('compStartDate').value;
             const endDate = document.getElementById('compEndDate').value;
@@ -713,147 +1031,123 @@
             const description = document.getElementById('compDescription').value.trim();
             const rulesText = document.getElementById('compRules').value.trim();
             const prize = document.getElementById('compPrize').value.trim();
-
-            // Валидация обязательных полей
+            
+            // Валидация
             if (!title || !startDate || !endDate || !shortDesc || !description || !rulesText) {
                 showError('Пожалуйста, заполните все обязательные поля');
                 return;
             }
-
-            // Проверка корректности дат
-            if (new Date(startDate) >= new Date(endDate)) {
-                showError('Дата окончания должна быть позже даты начала');
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                showError('Дата начала не может быть позже даты окончания');
                 return;
             }
-
-            try {
-                // Генерируем уникальный ID (в реальном приложении используйте UUID или серверный ID)
-                const newId = Date.now().toString();
-
-                const newCompetition = {
-                    id: newId,
-                    title,
-                    startDate,
-                    endDate,
-                    shortDesc,
-                    description,
-                    rules: rulesText.split('\n').filter(rule => rule.trim()),
-                    prize: prize || null,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-
-                competitions.push(newCompetition);
-
-                // Сохраняем в localStorage
-                localStorage.setItem(
-                    DB_CONFIG.competitionsKey,
-                    JSON.stringify(competitions)
-                );
-
-                showSuccess('Конкурс успешно создан!');
+            
+            // Разбиваем правила на массив
+            const rules = rulesText.split('\n')
+                .map(rule => rule.trim())
+                .filter(rule => rule.length > 0);
+            
+            if (rules.length === 0) {
+                showError('Добавьте хотя бы одно правило');
+                return;
+            }
+            
+            // Создаем новый конкурс
+            const newCompetition = {
+                id: Date.now(), // Генерируем ID на основе времени
+                title: title,
+                shortDescription: shortDesc,
+                description: description,
+                rules: rules,
+                startDate: startDate,
+                endDate: endDate,
+                prize: prize,
+                status: getCompetitionStatusByDates(startDate, endDate),
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.username || currentUser.id.toString()
+            };
+            
+            // Добавляем в массив конкурсов
+            competitions.push(newCompetition);
+            
+            // Сохраняем в базу данных
+            saveToDB(DB_CONFIG.competitionsKey, competitions);
+            
+            // Очищаем форму
+            document.getElementById('compTitle').value = '';
+            document.getElementById('compStartDate').value = '';
+            document.getElementById('compEndDate').value = '';
+            document.getElementById('compShortDesc').value = '';
+            document.getElementById('compDescription').value = '';
+            document.getElementById('compRules').value = '';
+            document.getElementById('compPrize').value = '';
+            
+            showSuccess('Конкурс успешно добавлен!');
+            
+            // Возвращаемся на главную страницу
+            setTimeout(() => {
                 showPage('mainPage');
-                renderCompetitions();
-            } catch (error) {
-                console.error('Ошибка при создании конкурса:', error);
-                showError('Не удалось создать конкурс. Попробуйте ещё раз.');
-            }
+                loadCompetitions();
+            }, 1000);
         }
 
-        function registerForCompetition() {
-            if (!userProfile) {
-                showError('Для регистрации заполните профиль');
-                showPage('profilePage');
-                return;
-            }
+        // ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
+        
+        function getCompetitionStatus(competition) {
+            const now = new Date();
+            const startDate = new Date(competition.startDate);
+            const endDate = new Date(competition.endDate);
+            
+            if (now < startDate) return 'upcoming';
+            if (now > endDate) return 'ended';
+            return 'active';
+        }
 
-            if (!currentCompetitionId) {
-                showError('Не указан конкурс для регистрации');
-                return;
-            }
+        function getCompetitionStatusByDates(startDate, endDate) {
+            const now = new Date();
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            if (now < start) return 'upcoming';
+            if (now > end) return 'ended';
+            return 'active';
+        }
 
-            const competition = competitions.find(c => c.id === currentCompetitionId);
-            if (!competition) {
-                showError('Конкурс не найден');
-                return;
-            }
+        function getStatusText(status) {
+            const statusMap = {
+                'active': 'Идет регистрация',
+                'ended': 'Завершен',
+                'upcoming': 'Скоро начнется'
+            };
+            return statusMap[status] || status;
+        }
 
-            // Проверяем статус конкурса
-            const status = getCompetitionStatus(competition);
-            if (status !== 'Активный') {
-                showError(`Регистрация возможна только для активных конкурсов. Текущий статус: ${status}`);
-                return;
-            }
-
+        function formatDate(dateString) {
             try {
-                const registrationsStr = localStorage.getItem(DB_CONFIG.registrationsKey) || '{}';
-                const registrations = JSON.parse(registrationsStr);
-
-                if (!registrations[currentCompetitionId]) {
-                    registrations[currentCompetitionId] = [];
-                }
-
-                // Проверяем, не зарегистрирован ли уже пользователь
-                const isAlreadyRegistered = registrations[currentCompetitionId].some(
-                    reg => reg.userId === currentUser.id
-                );
-
-                if (isAlreadyRegistered) {
-                    showError('Вы уже зарегистрированы на этот конкурс');
-                    return;
-                }
-
-                registrations[currentCompetitionId].push({
-                    userId: currentUser.id,
-                    userName: currentUser.first_name || currentUser.username || 'Анонимный',
-                    profile: userProfile,
-                    registeredAt: new Date().toISOString()
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
                 });
-
-                localStorage.setItem
-                    DB_CONFIG.registrationsKey,
-                    JSON.stringify(registrations)
-                );
-
-                showSuccess('Вы успешно зарегистрированы на конкурс!');
             } catch (error) {
-                console.error('Ошибка при регистрации:', error);
-                showError('Не удалось зарегистрироваться. Попробуйте ещё раз.');
+                return dateString;
             }
         }
 
-        // ===================== ДОПОЛНИТЕЛЬНЫЕ ИНСТРУМЕНТЫ =====================
-
-
-        // Функция для очистки localStorage (только для администратора)
-        function clearAllData() {
-            if (!confirm('Вы уверены, что хотите удалить ВСЕ данные? Это действие необратимо!')) {
-                return;
-            }
-
-            try {
-                localStorage.removeItem(DB_CONFIG.competitionsKey);
-                localStorage.removeItem(DB_CONFIG.registrationsKey);
-                localStorage.removeItem(DB_CONFIG.profilesKey);
-
-                loadData();
-                showSuccess('Все данные успешно удалены!');
-            } catch (error) {
-                console.error('Ошибка при очистке данных:', error);
-                showError('Не удалось удалить данные.');
-            }
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
         }
 
-        // Добавляем кнопку очистки для администраторов
-        if (ADMIN_USER_IDS.includes(currentUser?.id?.toString())) {
-            const adminPanel = document.getElementById('adminPanel');
-            adminPanel.insertAdjacentHTML('beforeend', `
-                <button class="btn btn-secondary" onclick="clearAllData()" style="margin-top: 16px;">
-                    🗑️ Очистить все данные
-                </button>
-            `);
-        }
+        // ===================== ЭКСПОРТ ФУНКЦИЙ ДЛЯ HTML =====================
+        window.showPage = showPage;
+        window.showCompetitionDetail = showCompetitionDetail;
+        window.registerForCompetition = registerForCompetition;
+        window.attachWork = attachWork;
+        window.saveProfile = saveProfile;
+        window.addNewCompetition = addNewCompetition;
     </script>
 </body>
 </html>
-
