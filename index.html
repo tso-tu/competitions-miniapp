@@ -412,7 +412,7 @@
             border-radius: 15px;
             padding: 30px;
             width: 90%;
-            max-width: 400px;
+            max-width: 500px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             animation: modalAppear 0.3s ease;
         }
@@ -511,6 +511,246 @@
         .status-ended {
             background-color: rgba(211, 47, 47, 0.2);
             color: var(--primary-red);
+        }
+
+        /* Стили для комментариев */
+        .comments-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid var(--light-gray);
+        }
+
+        .comments-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .comments-title {
+            color: var(--primary-green);
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .add-comment-btn {
+            background-color: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .add-comment-btn:hover {
+            background-color: var(--dark-green);
+            transform: translateY(-2px);
+        }
+
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-bottom: 20px;
+        }
+
+        .comment-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 3px solid var(--primary-red);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .comment-card.reply {
+            margin-left: 30px;
+            border-left-color: var(--primary-green);
+            background-color: #f8f9fa;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .comment-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .comment-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-green));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .comment-user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .comment-username {
+            font-weight: 600;
+            color: var(--primary-green);
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: var(--dark-gray);
+        }
+
+        .comment-text {
+            color: var(--black);
+            line-height: 1.6;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .comment-action-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--dark-gray);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .comment-action-btn:hover {
+            background-color: var(--light-gray);
+            color: var(--primary-green);
+        }
+
+        .comment-action-btn.reply-btn:hover {
+            color: var(--primary-green);
+        }
+
+        .comment-action-btn.delete-btn:hover {
+            color: var(--primary-red);
+        }
+
+        .reply-form {
+            margin-top: 10px;
+            margin-left: 30px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .reply-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .reply-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .reply-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .no-comments {
+            text-align: center;
+            padding: 30px;
+            color: var(--dark-gray);
+            font-style: italic;
+        }
+
+        .comments-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .comments-list::-webkit-scrollbar-track {
+            background: var(--light-gray);
+            border-radius: 3px;
+        }
+
+        .comments-list::-webkit-scrollbar-thumb {
+            background: var(--primary-red);
+            border-radius: 3px;
+        }
+
+        .comments-list::-webkit-scrollbar-thumb:hover {
+            background: var(--dark-red);
+        }
+
+        .reply-to {
+            font-size: 12px;
+            color: var(--dark-gray);
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .reply-to strong {
+            color: var(--primary-green);
         }
     </style>
 </head>
@@ -707,6 +947,25 @@
             </div>
         </div>
     </div>
+
+    <!-- Модальное окно для добавления комментария -->
+    <div class="modal" id="comment-modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 id="comment-modal-title">Добавить комментарий</h3>
+            <div id="reply-to-info" class="reply-to" style="display: none;"></div>
+            <div class="form-group">
+                <textarea id="comment-text" rows="4" placeholder="Введите ваш комментарий..." style="width: 100%;"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="button button-primary" id="submit-comment-btn">
+                    <i class="fas fa-paper-plane"></i> Отправить
+                </button>
+                <button class="button button-secondary" id="cancel-comment-btn">
+                    <i class="fas fa-times"></i> Отмена
+                </button>
+            </div>
+        </div>
+    </div>
     
     <script>
         // Инициализация Telegram Web App
@@ -717,6 +976,8 @@
         // Получаем ID пользователя Telegram
         const userId = tg.initDataUnsafe?.user?.id || 'test_user_123';
         const userName = tg.initDataUnsafe?.user?.first_name || 'Пользователь';
+        const userLastName = tg.initDataUnsafe?.user?.last_name || '';
+        const fullUserName = userName + (userLastName ? ' ' + userLastName : '');
         
         // Инициализация Supabase
         const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co'; 
@@ -729,7 +990,8 @@
             currentContestId: null,
             isAdmin: false,
             userProfile: null,
-            contests: []
+            contests: [],
+            currentReplyTo: null // Для ответов на комментарии
         };
         
         // Хэш пароля администратора
@@ -749,7 +1011,11 @@
         const adminModal = document.getElementById('admin-modal');
         const workModal = document.getElementById('work-modal');
         const messageModal = document.getElementById('message-modal');
+        const commentModal = document.getElementById('comment-modal');
         const workLinkInput = document.getElementById('work-link');
+        const commentText = document.getElementById('comment-text');
+        const commentModalTitle = document.getElementById('comment-modal-title');
+        const replyToInfo = document.getElementById('reply-to-info');
         
         // Инициализация приложения
         document.addEventListener('DOMContentLoaded', async () => {
@@ -811,6 +1077,10 @@
             
             // Кнопка OK в модальном окне сообщений
             document.getElementById('message-ok-btn').addEventListener('click', hideMessageModal);
+            
+            // Модальное окно для комментариев
+            document.getElementById('submit-comment-btn').addEventListener('click', submitComment);
+            document.getElementById('cancel-comment-btn').addEventListener('click', hideCommentModal);
         }
         
         // Функции для работы с модальными окнами
@@ -920,6 +1190,31 @@
         
         function hideMessageModal() {
             messageModal.style.display = 'none';
+        }
+        
+        function showCommentModal(isReply = false, parentComment = null) {
+            commentText.value = '';
+            appState.currentReplyTo = parentComment;
+            
+            if (isReply && parentComment) {
+                commentModalTitle.textContent = 'Ответить на комментарий';
+                replyToInfo.innerHTML = `Ответ пользователю <strong>${parentComment.username}</strong>`;
+                replyToInfo.style.display = 'block';
+            } else {
+                commentModalTitle.textContent = 'Добавить комментарий';
+                replyToInfo.style.display = 'none';
+                appState.currentReplyTo = null;
+            }
+            
+            commentModal.style.display = 'flex';
+            commentText.focus();
+        }
+        
+        function hideCommentModal() {
+            commentModal.style.display = 'none';
+            commentText.value = '';
+            replyToInfo.style.display = 'none';
+            appState.currentReplyTo = null;
         }
         
         // Показать/скрыть меню
@@ -1294,7 +1589,7 @@
                 }
             }
             
-            contestDetailContainer.innerHTML = `
+            const contestDetailContainerHTML = `
                 <div class="contest-detail-card">
                     <span class="status-badge ${statusBadgeClass}">${statusText}</span>
                     <h2 style="color: var(--primary-green); margin-bottom: 15px;">${contest.name}</h2>
@@ -1317,10 +1612,19 @@
                     </div>
                     
                     ${buttonsHtml}
+                    
+                    <!-- Секция комментариев -->
+                    <div class="comments-section" id="comments-section">
+                        <!-- Комментарии будут загружены здесь -->
+                    </div>
                 </div>
             `;
             
+            contestDetailContainer.innerHTML = contestDetailContainerHTML;
             showPage('contest');
+            
+            // Загружаем комментарии после отображения страницы
+            await loadComments();
             
             // Добавляем обработчики для кнопок
             if (!appState.isAdmin) {
@@ -1378,6 +1682,258 @@
                 }
             }
         }
+        
+        // ========== СИСТЕМА КОММЕНТАРИЕВ ==========
+        
+        // Загрузка комментариев
+        async function loadComments() {
+            try {
+                // Загружаем комментарии с рекурсивными ответами
+                const { data: comments, error } = await supabase
+                    .from('comments')
+                    .select(`
+                        *,
+                        replies:comments!parent_id (
+                            *,
+                            replies:comments!parent_id (*)
+                        )
+                    `)
+                    .eq('contest_id', appState.currentContestId)
+                    .is('parent_id', null) // Загружаем только родительские комментарии
+                    .order('created_at', { ascending: false });
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                renderComments(comments || []);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки комментариев:', error);
+                showMessage('Ошибка', 'Не удалось загрузить комментарии');
+            }
+        }
+        
+        // Отображение комментариев
+        function renderComments(comments) {
+            const commentsSection = document.getElementById('comments-section');
+            if (!commentsSection) return;
+            
+            let commentsHtml = '';
+            
+            if (!comments || comments.length === 0) {
+                commentsHtml = `
+                    <div class="comments-header">
+                        <h3 class="comments-title">
+                            <i class="far fa-comments"></i> Комментарии (0)
+                        </h3>
+                        <button class="add-comment-btn" id="add-comment-btn">
+                            <i class="fas fa-plus"></i> Добавить комментарий
+                        </button>
+                    </div>
+                    <div class="no-comments">
+                        <i class="far fa-comment-dots" style="font-size: 40px; margin-bottom: 10px; color: var(--primary-green);"></i>
+                        <p>Пока нет комментариев. Будьте первым!</p>
+                    </div>
+                `;
+            } else {
+                // Считаем общее количество комментариев (включая ответы)
+                let totalComments = 0;
+                const countComments = (commentList) => {
+                    commentList.forEach(comment => {
+                        totalComments++;
+                        if (comment.replies && comment.replies.length > 0) {
+                            countComments(comment.replies);
+                        }
+                    });
+                };
+                countComments(comments);
+                
+                commentsHtml = `
+                    <div class="comments-header">
+                        <h3 class="comments-title">
+                            <i class="far fa-comments"></i> Комментарии (${totalComments})
+                        </h3>
+                        <button class="add-comment-btn" id="add-comment-btn">
+                            <i class="fas fa-plus"></i> Добавить комментарий
+                        </button>
+                    </div>
+                    <div class="comments-list">
+                `;
+                
+                // Рендерим комментарии с рекурсивными ответами
+                comments.forEach(comment => {
+                    commentsHtml += renderComment(comment, 0);
+                });
+                
+                commentsHtml += '</div>';
+            }
+            
+            commentsSection.innerHTML = commentsHtml;
+            
+            // Добавляем обработчики событий
+            document.getElementById('add-comment-btn').addEventListener('click', () => {
+                showCommentModal(false);
+            });
+            
+            // Добавляем обработчики для кнопок комментариев
+            setTimeout(() => {
+                document.querySelectorAll('.reply-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const commentId = this.closest('.comment-card').dataset.commentId;
+                        const comment = findCommentById(comments, parseInt(commentId));
+                        if (comment) {
+                            showCommentModal(true, comment);
+                        }
+                    });
+                });
+                
+                document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const commentId = this.closest('.comment-card').dataset.commentId;
+                        deleteComment(parseInt(commentId));
+                    });
+                });
+            }, 100);
+        }
+        
+        // Рекурсивная функция для поиска комментария по ID
+        function findCommentById(comments, id) {
+            for (const comment of comments) {
+                if (comment.id === id) return comment;
+                if (comment.replies && comment.replies.length > 0) {
+                    const found = findCommentById(comment.replies, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        
+        // Рендеринг одного комментария с рекурсивными ответами
+        function renderComment(comment, level) {
+            const isReply = level > 0;
+            const canDelete = appState.isAdmin || comment.user_id === userId;
+            const timeAgo = getTimeAgo(comment.created_at);
+            
+            let html = `
+                <div class="comment-card ${isReply ? 'reply' : ''}" data-comment-id="${comment.id}">
+                    <div class="comment-header">
+                        <div class="comment-user">
+                            <div class="comment-avatar">
+                                ${comment.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="comment-user-info">
+                                <div class="comment-username">${comment.username}</div>
+                                <div class="comment-time">${timeAgo}</div>
+                            </div>
+                        </div>
+                        ${canDelete ? `
+                            <button class="comment-action-btn delete-btn delete-comment-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
+                    <div class="comment-actions">
+                        <button class="comment-action-btn reply-btn">
+                            <i class="fas fa-reply"></i> Ответить
+                        </button>
+                    </div>
+            `;
+            
+            // Рекурсивно рендерим ответы
+            if (comment.replies && comment.replies.length > 0) {
+                comment.replies.forEach(reply => {
+                    html += renderComment(reply, level + 1);
+                });
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        // Отправка комментария
+        async function submitComment() {
+            const text = commentText.value.trim();
+            
+            if (!text) {
+                showMessage('Ошибка', 'Пожалуйста, введите текст комментария');
+                return;
+            }
+            
+            if (text.length > 1000) {
+                showMessage('Ошибка', 'Комментарий не должен превышать 1000 символов');
+                return;
+            }
+            
+            try {
+                const commentData = {
+                    contest_id: appState.currentContestId,
+                    user_id: userId,
+                    username: fullUserName || 'Аноним',
+                    comment_text: text
+                };
+                
+                // Если это ответ на комментарий
+                if (appState.currentReplyTo) {
+                    commentData.parent_id = appState.currentReplyTo.id;
+                }
+                
+                const { error } = await supabase
+                    .from('comments')
+                    .insert(commentData);
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('Успех', appState.currentReplyTo ? 'Ответ успешно добавлен!' : 'Комментарий успешно добавлен!', () => {
+                    hideCommentModal();
+                    // Обновляем комментарии
+                    loadComments();
+                });
+                
+            } catch (error) {
+                console.error('Ошибка добавления комментария:', error);
+                showMessage('Ошибка', 'Не удалось добавить комментарий. Попробуйте еще раз.');
+            }
+        }
+        
+        // Удаление комментария
+        async function deleteComment(commentId) {
+            showMessage('Подтверждение', 'Вы уверены, что хотите удалить этот комментарий? Все ответы также будут удалены.', async () => {
+                try {
+                    // Рекурсивно удаляем комментарий и все его ответы
+                    const { error } = await supabase
+                        .from('comments')
+                        .delete()
+                        .or(`id.eq.${commentId},parent_id.eq.${commentId}`);
+                        
+                    if (error) {
+                        throw error;
+                    }
+                    
+                    // Удаляем комментарий из DOM с анимацией
+                    const commentCard = document.querySelector(`.comment-card[data-comment-id="${commentId}"]`);
+                    if (commentCard) {
+                        commentCard.style.animation = 'fadeOut 0.3s ease';
+                        setTimeout(() => {
+                            commentCard.remove();
+                            // Обновляем комментарии
+                            loadComments();
+                        }, 300);
+                    }
+                    
+                    showMessage('Успех', 'Комментарий успешно удален!');
+                    
+                } catch (error) {
+                    console.error('Ошибка удаления комментария:', error);
+                    showMessage('Ошибка', 'Не удалось удалить комментарий. Попробуйте еще раз.');
+                }
+            });
+        }
+        
+        // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
         
         // Показать страницу голосования
         async function showVotingPage(contestId) {
@@ -1820,6 +2376,12 @@
                     .delete()
                     .eq('contest_id', idToDelete);
                 
+                // Удаляем комментарии, связанные с конкурсом
+                await supabase
+                    .from('comments')
+                    .delete()
+                    .eq('contest_id', idToDelete);
+                
                 // Удаляем сам конкурс
                 const { error } = await supabase
                     .from('contests')
@@ -1851,6 +2413,39 @@
                 year: 'numeric'
             });
         }
+        
+        function getTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+            
+            if (diffSec < 60) return 'только что';
+            if (diffMin < 60) return `${diffMin} мин. назад`;
+            if (diffHour < 24) return `${diffHour} ч. назад`;
+            if (diffDay < 7) return `${diffDay} дн. назад`;
+            
+            return formatDate(dateString);
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Добавляем анимацию fadeOut
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; transform: translateY(0); }
+                to { opacity: 0; transform: translateY(10px); }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
