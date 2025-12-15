@@ -763,7 +763,7 @@
                     <i class="fas fa-bars"></i>
                 </button>
                 <h1>Конкурсы ArtSpace</h1>
-                <button class="admin-button" id="admin-login-btn">Войти как админ</button>
+                <button class="admin-button" id="admin-login-btn">Админ</button>
                 
                 <div class="menu-dropdown" id="menu-dropdown">
                     <a href="#" class="menu-item" id="profile-menu-item">
@@ -1320,8 +1320,7 @@
                     addContestMenuItem.style.display = 'flex';
                 }
             } else {
-                adminBtn.style.display = 'block';
-                adminBtn.innerHTML = '<i class="fas fa-lock"></i> Войти как админ';
+                adminBtn.style.display = 'none'; // Скрываем кнопку "Войти как админ"
                 adminMenuItem.innerHTML = '<i class="fas fa-lock"></i> Админ-панель';
                 if (addContestMenuItem) {
                     addContestMenuItem.style.display = 'none';
@@ -1866,7 +1865,17 @@
         // Рендеринг комментария с рекурсивными ответами
         function renderCommentWithReplies(comment, level) {
             const isReply = level > 0;
-            const canDelete = appState.isAdmin || comment.user_id === userId;
+            
+            // ВАЖНОЕ ИСПРАВЛЕНИЕ: Проверяем, может ли пользователь удалить комментарий
+            // Комментарий может быть удален если:
+            // 1. Пользователь является администратором (appState.isAdmin = true)
+            // 2. ID пользователя в комментарии совпадает с ID текущего пользователя
+            // 
+            // ВАЖНО: Проверяем, что comment.user_id существует и совпадает с userId
+            // userId - это ID пользователя Telegram, который получаем из tg.initDataUnsafe?.user?.id
+            // comment.user_id - это ID пользователя, сохраненный в базе данных при создании комментария
+            
+            const canDelete = appState.isAdmin || (comment.user_id && comment.user_id.toString() === userId.toString());
             const timeAgo = getTimeAgo(comment.created_at);
             
             let html = `
@@ -1964,7 +1973,9 @@
                         return;
                     }
                     
-                    const canDelete = appState.isAdmin || commentToDelete.user_id === userId;
+                    // ВАЖНОЕ ИСПРАВЛЕНИЕ: Та же логика проверки прав
+                    const canDelete = appState.isAdmin || (commentToDelete.user_id && commentToDelete.user_id.toString() === userId.toString());
+                    
                     if (!canDelete) {
                         showMessage('Ошибка', 'У вас нет прав для удаления этого комментария');
                         return;
