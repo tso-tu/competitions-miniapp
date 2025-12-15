@@ -763,7 +763,7 @@
                     <i class="fas fa-bars"></i>
                 </button>
                 <h1>Конкурсы ArtSpace</h1>
-                <button class="admin-button" id="admin-login-btn">Админ</button>
+                <button class="admin-button" id="admin-login-btn">Войти как админ</button>
                 
                 <div class="menu-dropdown" id="menu-dropdown">
                     <a href="#" class="menu-item" id="profile-menu-item">
@@ -772,7 +772,7 @@
                     <a href="#" class="menu-item" id="admin-menu-item">
                         <i class="fas fa-lock"></i> Админ-панель
                     </a>
-                    <a href="#" class="menu-item" id="add-contest-menu-item">
+                    <a href="#" class="menu-item" id="add-contest-menu-item" style="display: none;">
                         <i class="fas fa-plus-circle"></i> Добавить конкурс
                     </a>
                 </div>
@@ -994,7 +994,8 @@
             isAdmin: false,
             userProfile: null,
             contests: [],
-            comments: [] // Сохраняем загруженные комментарии для быстрого доступа
+            comments: [],
+            currentReplyTo: null
         };
         
         // Хэш пароля администратора
@@ -1041,7 +1042,6 @@
             
             document.getElementById('admin-menu-item').addEventListener('click', () => {
                 if (appState.isAdmin) {
-                    // Админ уже вошел, показываем главную страницу
                     showPage('home');
                 } else {
                     showAdminModal();
@@ -1050,14 +1050,17 @@
             });
             
             // Пункт меню "Добавить конкурс" (виден только админам)
-            document.getElementById('add-contest-menu-item').addEventListener('click', () => {
-                if (appState.isAdmin) {
-                    showAdminContestPage();
-                } else {
-                    showAdminModal();
-                }
-                hideMenu();
-            });
+            const addContestMenuItem = document.getElementById('add-contest-menu-item');
+            if (addContestMenuItem) {
+                addContestMenuItem.addEventListener('click', () => {
+                    if (appState.isAdmin) {
+                        showAdminContestPage();
+                    } else {
+                        showAdminModal();
+                    }
+                    hideMenu();
+                });
+            }
             
             // Кнопка администратора в заголовке
             document.getElementById('admin-login-btn').addEventListener('click', () => {
@@ -1095,6 +1098,23 @@
             // Модальное окно для комментариев
             document.getElementById('submit-comment-btn').addEventListener('click', submitComment);
             document.getElementById('cancel-comment-btn').addEventListener('click', hideCommentModal);
+            
+            // Закрытие модальных окон по клику на фон
+            adminModal.addEventListener('click', (e) => {
+                if (e.target === adminModal) hideAdminModal();
+            });
+            
+            workModal.addEventListener('click', (e) => {
+                if (e.target === workModal) hideWorkModal();
+            });
+            
+            messageModal.addEventListener('click', (e) => {
+                if (e.target === messageModal) hideMessageModal();
+            });
+            
+            commentModal.addEventListener('click', (e) => {
+                if (e.target === commentModal) hideCommentModal();
+            });
         }
         
         // Функции для работы с модальными окнами
@@ -1173,25 +1193,31 @@
             messageModal.style.display = 'flex';
             
             // Обработчик для кнопки OK
-            okBtn.onclick = function() {
+            const handleOkClick = function() {
                 hideMessageModal();
                 if (typeof callback === 'function') {
                     callback();
                 }
+                okBtn.removeEventListener('click', handleOkClick);
             };
             
+            okBtn.addEventListener('click', handleOkClick);
+            
             // Закрытие по клику на фон
-            messageModal.onclick = function(event) {
+            const handleModalClick = function(event) {
                 if (event.target === messageModal) {
                     hideMessageModal();
                     if (typeof callback === 'function') {
                         callback();
                     }
+                    messageModal.removeEventListener('click', handleModalClick);
                 }
             };
             
+            messageModal.addEventListener('click', handleModalClick);
+            
             // Закрытие по Escape
-            document.addEventListener('keydown', function closeOnEscape(event) {
+            const closeOnEscape = function(event) {
                 if (event.key === 'Escape') {
                     hideMessageModal();
                     if (typeof callback === 'function') {
@@ -1199,7 +1225,9 @@
                     }
                     document.removeEventListener('keydown', closeOnEscape);
                 }
-            });
+            };
+            
+            document.addEventListener('keydown', closeOnEscape);
         }
         
         function hideMessageModal() {
@@ -1208,12 +1236,12 @@
         
         function showCommentModal(isReply = false, parentComment = null) {
             commentText.value = '';
+            appState.currentReplyTo = parentComment;
             
             if (isReply && parentComment) {
                 commentModalTitle.textContent = 'Ответить на комментарий';
                 replyToInfo.innerHTML = `Ответ пользователю <strong>${parentComment.username}</strong>`;
                 replyToInfo.style.display = 'block';
-                replyToInfo.dataset.parentId = parentComment.id;
             } else {
                 commentModalTitle.textContent = 'Добавить комментарий';
                 replyToInfo.style.display = 'none';
@@ -1227,6 +1255,7 @@
             commentModal.style.display = 'none';
             commentText.value = '';
             replyToInfo.style.display = 'none';
+            appState.currentReplyTo = null;
         }
         
         // Показать/скрыть меню
@@ -1287,17 +1316,27 @@
                 adminBtn.style.display = 'block';
                 adminBtn.innerHTML = '<i class="fas fa-user-cog"></i> Админ';
                 adminMenuItem.innerHTML = '<i class="fas fa-user-cog"></i> Админ-панель';
-                addContestMenuItem.style.display = 'flex';
+                if (addContestMenuItem) {
+                    addContestMenuItem.style.display = 'flex';
+                }
             } else {
-                adminBtn.style.display = 'none';
+                adminBtn.style.display = 'block';
+                adminBtn.innerHTML = '<i class="fas fa-lock"></i> Войти как админ';
                 adminMenuItem.innerHTML = '<i class="fas fa-lock"></i> Админ-панель';
-                addContestMenuItem.style.display = 'none';
+                if (addContestMenuItem) {
+                    addContestMenuItem.style.display = 'none';
+                }
             }
         }
         
         // Проверка пароля администратора
         async function checkAdminPassword() {
             const password = document.getElementById('admin-password').value;
+            
+            if (!password) {
+                showMessage('Ошибка', 'Введите пароль');
+                return;
+            }
             
             const encoder = new TextEncoder();
             const data = encoder.encode(password);
@@ -1704,7 +1743,7 @@
                     .from('comments')
                     .select('*')
                     .eq('contest_id', appState.currentContestId)
-                    .order('created_at', { ascending: true }); // По возрастанию, чтобы родительские комментарии были первыми
+                    .order('created_at', { ascending: true });
                     
                 if (error) {
                     throw error;
@@ -1723,30 +1762,25 @@
             }
         }
         
-        // Построение дерева комментариев (родительские + ответы)
+        // Построение дерева комментариев
         function buildCommentTree(comments) {
             const commentMap = {};
             const roots = [];
             
-            // Сначала создаем карту всех комментариев по их ID
             comments.forEach(comment => {
                 comment.replies = [];
                 commentMap[comment.id] = comment;
             });
             
-            // Затем связываем комментарии в дерево
             comments.forEach(comment => {
                 if (comment.parent_id) {
-                    // Это ответ на другой комментарий
                     const parent = commentMap[comment.parent_id];
                     if (parent) {
                         parent.replies.push(comment);
                     } else {
-                        // Родительский комментарий не найден, все равно добавляем как корневой
                         roots.push(comment);
                     }
                 } else {
-                    // Это корневой комментарий
                     roots.push(comment);
                 }
             });
@@ -1777,7 +1811,6 @@
                     </div>
                 `;
             } else {
-                // Считаем общее количество комментариев
                 const totalComments = appState.comments.length;
                 
                 commentsHtml = `
@@ -1792,7 +1825,6 @@
                     <div class="comments-list" id="comments-list">
                 `;
                 
-                // Рендерим дерево комментариев
                 commentTree.forEach(comment => {
                     commentsHtml += renderCommentWithReplies(comment, 0);
                 });
@@ -1802,7 +1834,7 @@
             
             commentsSection.innerHTML = commentsHtml;
             
-            // Добавляем обработчики событий
+            // Добавляем обработчики событий для новой кнопки добавления комментария
             const addCommentBtn = document.getElementById('add-comment-btn');
             if (addCommentBtn) {
                 addCommentBtn.addEventListener('click', () => {
@@ -1863,7 +1895,6 @@
                     </div>
             `;
             
-            // Рекурсивно рендерим ответы
             if (comment.replies && comment.replies.length > 0) {
                 comment.replies.forEach(reply => {
                     html += renderCommentWithReplies(reply, level + 1);
@@ -1896,10 +1927,8 @@
                     comment_text: text
                 };
                 
-                // Проверяем, является ли комментарий ответом
-                const parentId = replyToInfo.style.display === 'block' ? parseInt(replyToInfo.dataset.parentId) : null;
-                if (parentId) {
-                    commentData.parent_id = parentId;
+                if (appState.currentReplyTo) {
+                    commentData.parent_id = appState.currentReplyTo.id;
                 }
                 
                 const { error } = await supabase
@@ -1910,9 +1939,12 @@
                     throw error;
                 }
                 
-                showMessage('Успех', parentId ? 'Ответ успешно добавлен!' : 'Комментарий успешно добавлен!', () => {
-                    hideCommentModal();
-                    // Обновляем комментарии
+                // Закрываем модальное окно ДО показа сообщения
+                hideCommentModal();
+                
+                // Показываем сообщение об успехе
+                showMessage('Успех', appState.currentReplyTo ? 'Ответ успешно добавлен!' : 'Комментарий успешно добавлен!', () => {
+                    // Обновляем комментарии после закрытия сообщения
                     loadComments();
                 });
                 
@@ -1926,25 +1958,21 @@
         async function deleteComment(commentId) {
             showMessage('Подтверждение', 'Вы уверены, что хотите удалить этот комментарий? Все ответы также будут удалены.', async () => {
                 try {
-                    // Находим комментарий и все его ответы
                     const commentToDelete = appState.comments.find(c => c.id === commentId);
                     if (!commentToDelete) {
                         showMessage('Ошибка', 'Комментарий не найден');
                         return;
                     }
                     
-                    // Проверяем права на удаление
                     const canDelete = appState.isAdmin || commentToDelete.user_id === userId;
                     if (!canDelete) {
                         showMessage('Ошибка', 'У вас нет прав для удаления этого комментария');
                         return;
                     }
                     
-                    // Находим все ответы на этот комментарий
                     const repliesIds = getCommentRepliesIds(commentId, appState.comments);
                     const allIdsToDelete = [commentId, ...repliesIds];
                     
-                    // Удаляем комментарии из базы данных
                     const { error } = await supabase
                         .from('comments')
                         .delete()
@@ -1954,10 +1982,8 @@
                         throw error;
                     }
                     
-                    // Обновляем локальное состояние
                     appState.comments = appState.comments.filter(c => !allIdsToDelete.includes(c.id));
                     
-                    // Обновляем отображение комментариев
                     const commentTree = buildCommentTree(appState.comments);
                     renderComments(commentTree);
                     
@@ -1970,18 +1996,14 @@
             });
         }
         
-        // Получение всех ID ответов на комментарий (рекурсивно)
+        // Получение всех ID ответов на комментарий
         function getCommentRepliesIds(commentId, allComments) {
             const repliesIds = [];
             
-            // Находим прямые ответы
             const directReplies = allComments.filter(c => c.parent_id === commentId);
             
-            // Добавляем ID прямых ответов
             directReplies.forEach(reply => {
                 repliesIds.push(reply.id);
-                
-                // Рекурсивно находим ответы на ответы
                 const nestedReplies = getCommentRepliesIds(reply.id, allComments);
                 repliesIds.push(...nestedReplies);
             });
@@ -1999,7 +2021,6 @@
             appState.currentContestId = contestId;
             const isEnded = new Date(contest.end_date) < new Date();
             
-            // Загружаем работы участников
             try {
                 const { data: works, error } = await supabase
                     .from('works')
