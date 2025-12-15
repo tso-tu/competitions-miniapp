@@ -1355,6 +1355,111 @@
         
         // Отправить работу на конкурс
         async function submitWork() {
+    const workUrl = workLinkInput.value.trim();
+    
+    if (!workUrl) {
+        alert('Пожалуйста, введите ссылку на работу');
+        return;
+    }
+    
+    // Проверяем, заполнен ли профиль
+    if (!appState.userProfile || !appState.userProfile.full_name) {
+        alert('Пожалуйста, сначала заполните профиль!');
+        hideWorkModal();
+        showPage('profile');
+        return;
+    }
+    
+    try {
+        // Получаем информацию о конкурсе
+        const contest = appState.contests.find(c => c.id == appState.currentContestId);
+        if (!contest) {
+            alert('Ошибка: конкурс не найден');
+            return;
+        }
+        
+        // Проверка 1: Конкурс еще активен?
+        if (new Date(contest.end_date) < new Date()) {
+            alert('Конкурс уже завершен. Прием работ окончен.');
+            hideWorkModal();
+            return;
+        }
+        
+        // Проверка 2: Конкурс уже начался?
+        if (new Date(contest.start_date) > new Date()) {
+            alert('Конкурс еще не начался. Прием работ начнется ' + formatDate(contest.start_date));
+            hideWorkModal();
+            return;
+        }
+        
+        // Проверка 3: Максимальное число участников
+        const maxParticipants = contest.max_participants || 0;
+        const currentParticipants = contest.participant_count || 0;
+        
+        if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
+            alert('К сожалению, максимальное число участников (' + maxParticipants + ') уже достигнуто. Регистрация закрыта.');
+            hideWorkModal();
+            return;
+        }
+        
+        // Проверка 4: Участник уже отправил работу?
+        const { data: existingWork } = await supabase
+            .from('works')
+            .select('*')
+            .eq('contest_id', appState.currentContestId)
+            .eq('user_id', userId)
+            .single();
+            
+        if (existingWork) {
+            alert('Вы уже отправили работу на этот конкурс!');
+            hideWorkModal();
+            return;
+        }
+        
+        // Добавляем работу в базу данных
+        const { error } = await supabase
+            .from('works')
+            .insert({
+                contest_id: appState.currentContestId,
+                user_id: userId,
+                work_url: workUrl,
+                votes: 0
+            });
+            
+        if (error) {
+            throw error;
+        }
+        
+        // Обновляем счетчик участников в конкурсе
+        const newCount = currentParticipants + 1;
+        
+        await supabase
+            .from('contests')
+            .update({ participant_count: newCount })
+            .eq('id', appState.currentContestId);
+        
+        alert('Ваша работа успешно отправлена на конкурс!');
+        hideWorkModal();
+        
+        // Обновляем данные конкурса в локальном состоянии
+        contest.participant_count = newCount;
+        
+        // Обновляем страницу конкурса
+        showContestDetails(appState.currentContestId);
+        
+    } catch (error) {
+        console.error('Ошибка отправки работы:', error);
+        
+        if (error.code === '23505') { // Ошибка уникальности PostgreSQL
+            alert('Вы уже отправили работу на этот конкурс!');
+        } else if (error.code === '42501') { // Ошибка прав доступа
+            alert('Ошибка доступа. Пожалуйста, попробуйте еще раз.');
+        } else {
+            alert('Ошибка при отправке работы. Попробуйте еще раз.');
+        }
+    }
+}
+        /*async function submitWork() {
             const workUrl = workLinkInput.value.trim();
             
             if (!workUrl) {
@@ -1403,10 +1508,30 @@
                 console.error('Ошибка отправки работы:', error);
                 alert('Ошибка при отправке работы. Возможно, вы уже отправили работу на этот конкурс.');
             }
-        }
+        }*/
         
         // Показать страницу добавления/редактирования конкурса (админ)
-        function showAdminContestPage() {
+        // Показать страницу добавления/редактирования конкурса (админ)
+function showAdminContestPage() {
+    // Сбрасываем ID текущего конкурса для добавления нового
+    appState.currentContestId = null;
+    
+    // Сброс формы
+    document.getElementById('contest-name').value = '';
+    document.getElementById('short-description').value = '';
+    document.getElementById('full-description').value = '';
+    document.getElementById('contest-rules').value = '';
+    document.getElementById('start-date').value = '';
+    document.getElementById('end-date').value = '';
+    document.getElementById('max-participants').value = '0';
+    
+    document.getElementById('admin-contest-title').textContent = 'Добавить конкурс';
+    document.getElementById('delete-contest-btn').classList.add('hidden');
+    document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Сохранить конкурс';
+    
+    showPage('admin-contest');
+}
+        /*function showAdminContestPage() {
             // Сброс формы
             document.getElementById('contest-name').value = '';
             document.getElementById('short-description').value = '';
@@ -1421,10 +1546,29 @@
             document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Сохранить конкурс';
             
             showPage('admin-contest');
-        }
+        }*/
         
         // Показать страницу редактирования конкурса
-        function showEditContestPage(contest) {
+        // Показать страницу редактирования конкурса
+function showEditContestPage(contest) {
+    // Устанавливаем ID редактируемого конкурса
+    appState.currentContestId = contest.id;
+    
+    document.getElementById('contest-name').value = contest.name || '';
+    document.getElementById('short-description').value = contest.short_description || '';
+    document.getElementById('full-description').value = contest.full_description || '';
+    document.getElementById('contest-rules').value = contest.rules || '';
+    document.getElementById('start-date').value = contest.start_date.split('T')[0] || '';
+    document.getElementById('end-date').value = contest.end_date.split('T')[0] || '';
+    document.getElementById('max-participants').value = contest.max_participants || 0;
+    
+    document.getElementById('admin-contest-title').textContent = 'Редактировать конкурс';
+    document.getElementById('delete-contest-btn').classList.remove('hidden');
+    document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Обновить конкурс';
+    
+    showPage('admin-contest');
+}
+        /*function showEditContestPage(contest) {
             document.getElementById('contest-name').value = contest.name || '';
             document.getElementById('short-description').value = contest.short_description || '';
             document.getElementById('full-description').value = contest.full_description || '';
@@ -1438,10 +1582,75 @@
             document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Обновить конкурс';
             
             showPage('admin-contest');
-        }
+        }*/
         
         // Сохранить/обновить конкурс
         async function saveContest() {
+    const contestData = {
+        name: document.getElementById('contest-name').value.trim(),
+        short_description: document.getElementById('short-description').value.trim(),
+        full_description: document.getElementById('full-description').value.trim(),
+        rules: document.getElementById('contest-rules').value.trim(),
+        start_date: document.getElementById('start-date').value,
+        end_date: document.getElementById('end-date').value,
+        max_participants: parseInt(document.getElementById('max-participants').value) || 0
+    };
+    
+    // Валидация
+    if (!contestData.name || !contestData.start_date || !contestData.end_date) {
+        alert('Пожалуйста, заполните обязательные поля: название, дата начала и дата окончания');
+        return;
+    }
+    
+    if (new Date(contestData.end_date) <= new Date(contestData.start_date)) {
+        alert('Дата окончания должна быть позже даты начала');
+        return;
+    }
+    
+    try {
+        // ДОБАВЛЕНО: Получаем текущий режим из заголовка формы
+        const isEditing = document.getElementById('admin-contest-title').textContent === 'Редактировать конкурс';
+        
+        if (isEditing && appState.currentContestId) {
+            // Редактирование существующего конкурса
+            const { error } = await supabase
+                .from('contests')
+                .update(contestData)
+                .eq('id', appState.currentContestId);
+                
+            if (error) {
+                throw error;
+            }
+            
+            alert('Конкурс успешно обновлен!');
+        } else {
+            // Добавление нового конкурса
+            contestData.participant_count = 0;
+            
+            const { error } = await supabase
+                .from('contests')
+                .insert(contestData);
+                
+            if (error) {
+                throw error;
+            }
+            
+            alert('Конкурс успешно добавлен!');
+        }
+        
+        // Сбрасываем текущий ID конкурса
+        appState.currentContestId = null;
+        
+        // Обновляем список конкурсов
+        await loadContests();
+        showPage('home');
+        
+    } catch (error) {
+        console.error('Ошибка сохранения конкурса:', error);
+        alert('Ошибка при сохранении конкурса. Попробуйте еще раз.');
+    }
+}
+       /* async function saveContest() {
             const contestData = {
                 name: document.getElementById('contest-name').value.trim(),
                 short_description: document.getElementById('short-description').value.trim(),
@@ -1499,7 +1708,7 @@
                 console.error('Ошибка сохранения конкурса:', error);
                 alert('Ошибка при сохранении конкурса. Попробуйте еще раз.');
             }
-        }
+        }*/
         
         // Удалить конкурс
         async function deleteContest(contestId) {
@@ -1553,4 +1762,5 @@
     </script>
 </body>
 </html>
+
 
