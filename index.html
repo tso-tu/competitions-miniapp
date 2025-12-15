@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -500,6 +501,87 @@
             background-color: rgba(211, 47, 47, 0.2);
             color: var(--primary-red);
         }
+
+        .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 15px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: modalAppear 0.3s ease;
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.participants-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.progress-bar {
+    flex-grow: 1;
+    height: 6px;
+    background-color: var(--gray);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary-green);
+    transition: width 0.3s ease;
+}
+
+.progress-fill.warning {
+    background-color: goldenrod;
+}
+
+.progress-fill.danger {
+    background-color: var(--primary-red);
+}
+
+.participants-count {
+    font-weight: 600;
+    color: var(--primary-green);
+    font-size: 16px;
+}
+
+.limit-info {
+    font-size: 12px;
+    color: var(--dark-gray);
+    margin-top: 3px;
+}
+
+.limit-info.full {
+    color: var(--primary-red);
+    font-weight: 500;
+}
+        
     </style>
 </head>
 <body>
@@ -964,7 +1046,95 @@
         }
         
         // Отображение списка конкурсов
+
         function renderContestList() {
+    if (!appState.contests.length) {
+        contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
+        return;
+    }
+    
+    let html = '<div class="contest-list">';
+    
+    appState.contests.forEach(contest => {
+        const isEnded = new Date(contest.end_date) < new Date();
+        const statusClass = isEnded ? 'ended' : '';
+        const statusText = isEnded ? 'Завершен' : 'Активен';
+        const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
+        
+        // Форматируем количество участников
+        let participantsText = '';
+        if (contest.max_participants > 0) {
+            // Формат: "15/50" (текущее/максимальное)
+            participantsText = `${contest.participant_count || 0}/${contest.max_participants}`;
+            
+            // Добавляем индикатор заполненности
+            const percentage = Math.round(((contest.participant_count || 0) / contest.max_participants) * 100);
+            let progressColor = 'var(--primary-green)';
+            
+            if (percentage >= 90) {
+                progressColor = 'var(--primary-red)';
+            } else if (percentage >= 70) {
+                progressColor = 'var(--light-red)';
+            } else if (percentage >= 50) {
+                progressColor = 'goldenrod';
+            }
+            
+            html += `
+                <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
+                    <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                    <h3 class="contest-title">${contest.name}</h3>
+                    <p class="contest-description">${contest.short_description}</p>
+                    <div class="contest-details">
+                        <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
+                        <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
+                    </div>
+                    <div class="contest-participants">
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-users"></i> 
+                                <span>Участников: <strong>${participantsText}</strong></span>
+                            </div>
+                            <div style="width: 60px; height: 6px; background-color: var(--light-gray); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${percentage}%; height: 100%; background-color: ${progressColor};"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Без ограничений
+            participantsText = `${contest.participant_count || 0}`;
+            
+            html += `
+                <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
+                    <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                    <h3 class="contest-title">${contest.name}</h3>
+                    <p class="contest-description">${contest.short_description}</p>
+                    <div class="contest-details">
+                        <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
+                        <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
+                    </div>
+                    <div class="contest-participants">
+                        <i class="fas fa-users"></i> Участников: <strong>${participantsText}</strong> (без ограничений)
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div>';
+    contestListContainer.innerHTML = html;
+    
+    // Добавляем обработчики кликов на карточки конкурсов
+    document.querySelectorAll('.contest-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const contestId = this.getAttribute('data-contest-id');
+            showContestDetails(contestId);
+        });
+    });
+}
+        
+        /*function renderContestList() {
             if (!appState.contests.length) {
                 contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
                 return;
@@ -1004,10 +1174,189 @@
                     showContestDetails(contestId);
                 });
             });
-        }
+        }*/
         
         // Показать детали конкурса
-        async function showContestDetails(contestId) {
+
+function showContestDetails(contestId) {
+    const contest = appState.contests.find(c => c.id == contestId);
+    if (!contest) return;
+    
+    appState.currentContestId = contestId;
+    const isEnded = new Date(contest.end_date) < new Date();
+    const statusText = isEnded ? 'Завершен' : 'Активен';
+    const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
+    
+    // Форматируем информацию об участниках
+    let participantsInfo = '';
+    if (contest.max_participants > 0) {
+        const remaining = contest.max_participants - (contest.participant_count || 0);
+        const percentage = Math.round(((contest.participant_count || 0) / contest.max_participants) * 100);
+        
+        participantsInfo = `
+            <div style="margin: 15px 0; padding: 15px; background-color: #f8f9fa; border-radius: 10px; border-left: 4px solid var(--primary-green);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 600; color: var(--primary-green);">
+                        <i class="fas fa-user-check"></i> Участники: 
+                        <span style="font-size: 18px; margin-left: 5px;">${contest.participant_count || 0}/${contest.max_participants}</span>
+                    </div>
+                    <div style="font-size: 14px; color: ${remaining > 0 ? 'var(--primary-green)' : 'var(--primary-red)'};">
+                        ${remaining > 0 ? `Осталось мест: ${remaining}` : 'Места закончились'}
+                    </div>
+                </div>
+                <div style="width: 100%; height: 8px; background-color: var(--light-gray); border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${percentage}%; height: 100%; background-color: ${percentage >= 90 ? 'var(--primary-red)' : percentage >= 70 ? 'var(--light-red)' : 'var(--primary-green)'};"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: var(--dark-gray);">
+                    <span>0</span>
+                    <span>${percentage}% заполнено</span>
+                    <span>${contest.max_participants}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        participantsInfo = `
+            <div style="margin: 15px 0; padding: 10px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--primary-green);">
+                <i class="fas fa-users"></i> <strong>Участников:</strong> ${contest.participant_count || 0} (без ограничений)
+            </div>
+        `;
+    }
+    
+    // Проверяем, отправил ли пользователь уже работу
+    let userWork = null;
+    try {
+        const { data } = await supabase
+            .from('works')
+            .select('*')
+            .eq('contest_id', contestId)
+            .eq('user_id', userId)
+            .single();
+            
+        userWork = data;
+    } catch (error) {
+        // Работа не найдена
+    }
+    
+    let buttonsHtml = '';
+    
+    if (appState.isAdmin) {
+        // Админ видит кнопки редактирования и удаления
+        buttonsHtml = `
+            <div class="contest-actions">
+                <button class="button button-primary" id="edit-contest-btn">
+                    <i class="fas fa-edit"></i> Редактировать конкурс
+                </button>
+                <button class="button button-secondary" id="delete-contest-btn-details">
+                    <i class="fas fa-trash"></i> Удалить конкурс
+                </button>
+            </div>
+        `;
+    } else {
+        // Обычный пользователь
+        if (!isEnded && !userWork) {
+            // Проверяем, есть ли еще места
+            const canParticipate = contest.max_participants === 0 || 
+                                  (contest.participant_count || 0) < contest.max_participants;
+            
+            const buttonText = canParticipate ? 
+                '<i class="fas fa-paperclip"></i> Прикрепить работу' :
+                '<i class="fas fa-times-circle"></i> Мест нет';
+            
+            const buttonClass = canParticipate ? 'button-primary' : 'button-disabled';
+            
+            buttonsHtml = `
+                <div class="contest-actions">
+                    <button class="button ${buttonClass}" id="attach-work-btn" ${!canParticipate ? 'disabled' : ''}>
+                        ${buttonText}
+                    </button>
+                    <button class="button button-secondary" id="voting-btn">
+                        <i class="fas fa-vote-yea"></i> Голосование
+                    </button>
+                </div>
+            `;
+        } else if (!isEnded && userWork) {
+            buttonsHtml = `
+                <div class="contest-actions">
+                    <div class="alert alert-success">Вы уже отправили работу на этот конкурс!</div>
+                    <button class="button button-secondary" id="voting-btn">
+                        <i class="fas fa-vote-yea"></i> Голосование
+                    </button>
+                </div>
+            `;
+        } else {
+            buttonsHtml = `
+                <div class="contest-actions">
+                    <button class="button button-secondary" id="voting-btn">
+                        <i class="fas fa-vote-yea"></i> Голосование
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    contestDetailContainer.innerHTML = `
+        <div class="contest-detail-card">
+            <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+            <h2 style="color: var(--primary-green); margin-bottom: 15px;">${contest.name}</h2>
+            
+            ${participantsInfo}
+            
+            <div class="contest-details" style="margin-bottom: 20px;">
+                <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
+                <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
+            </div>
+            
+            <div class="contest-full-description">
+                <h3>Описание конкурса</h3>
+                <p>${contest.full_description}</p>
+            </div>
+            
+            <div class="contest-rules">
+                <h3>Правила конкурса</h3>
+                <p>${contest.rules}</p>
+            </div>
+            
+            ${buttonsHtml}
+        </div>
+    `;
+    
+    showPage('contest');
+    
+    // Добавляем обработчики для кнопок
+    if (!appState.isAdmin) {
+        const attachBtn = document.getElementById('attach-work-btn');
+        if (attachBtn && !attachBtn.disabled) {
+            attachBtn.addEventListener('click', () => {
+                if (!appState.userProfile || !appState.userProfile.full_name) {
+                    showWorkModal('Для участия в конкурсе необходимо заполнить профиль!');
+                } else {
+                    showWorkModal('Введите ссылку на вашу работу:');
+                }
+            });
+        }
+        
+        const votingBtn = document.getElementById('voting-btn');
+        if (votingBtn) {
+            votingBtn.addEventListener('click', () => showVotingPage(contestId));
+        }
+    } else {
+        const editBtn = document.getElementById('edit-contest-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => showEditContestPage(contest));
+        }
+        
+        const deleteBtn = document.getElementById('delete-contest-btn-details');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                if (confirm('Вы уверены, что хотите удалить этот конкурс? Это действие нельзя отменить.')) {
+                    deleteContest(contestId);
+                }
+            });
+        }
+    }
+}
+        
+        /*async function showContestDetails(contestId) {
             const contest = appState.contests.find(c => c.id == contestId);
             if (!contest) return;
             
@@ -1107,6 +1456,39 @@
             // Добавляем обработчики для кнопок
             if (!appState.isAdmin) {
                 const attachBtn = document.getElementById('attach-work-btn');
+if (attachBtn) {
+    attachBtn.addEventListener('click', () => {
+        if (!appState.userProfile || !appState.userProfile.full_name) {
+            showWorkModal('Для участия в конкурсе необходимо заполнить профиль!');
+        } else {
+            // Дополнительная проверка перед открытием модального окна
+            const contest = appState.contests.find(c => c.id == appState.currentContestId);
+            
+            // Проверка дат
+            if (new Date(contest.end_date) < new Date()) {
+                showMessage('Конкурс завершен', 'Конкурс уже завершен. Прием работ окончен.');
+                return;
+            }
+            
+            if (new Date(contest.start_date) > new Date()) {
+                showMessage('Конкурс не начался', `Конкурс еще не начался. Прием работ начнется ${formatDate(contest.start_date)}`);
+                return;
+            }
+            
+            // Проверка лимита участников
+            const maxParticipants = contest.max_participants || 0;
+            const currentParticipants = contest.participant_count || 0;
+            
+            if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
+                showMessage('Места закончились', `Все места уже заняты. Максимальное число участников: ${maxParticipants}`);
+                return;
+            }
+            
+            showWorkModal('Введите ссылку на вашу работу:');
+        }
+    });
+}
+                /*const attachBtn = document.getElementById('attach-work-btn');
                 if (attachBtn) {
                     attachBtn.addEventListener('click', () => {
                         if (!appState.userProfile || !appState.userProfile.full_name) {
@@ -1120,7 +1502,7 @@
                 const votingBtn = document.getElementById('voting-btn');
                 if (votingBtn) {
                     votingBtn.addEventListener('click', () => showVotingPage(contestId));
-                }
+                }*/
             } else {
                 const editBtn = document.getElementById('edit-contest-btn');
                 if (editBtn) {
@@ -1136,7 +1518,7 @@
                     });
                 }
             }
-        }
+        }*/
         
         // Показать страницу голосования
         async function showVotingPage(contestId) {
@@ -1332,7 +1714,57 @@
         }
         
         // Показать модальное окно для работы
+
         function showWorkModal(message) {
+    const messageEl = document.getElementById('work-modal-message');
+    
+    // Получаем информацию о конкурсе
+    const contest = appState.contests.find(c => c.id == appState.currentContestId);
+    let additionalInfo = '';
+    
+    if (contest) {
+        const maxParticipants = contest.max_participants || 0;
+        const currentParticipants = contest.participant_count || 0;
+        
+        if (maxParticipants > 0) {
+            const remaining = maxParticipants - currentParticipants;
+            const statusColor = remaining > 0 ? 'var(--primary-green)' : 'var(--primary-red)';
+            additionalInfo = `<div style="margin-top: 10px; padding: 8px; background-color: #e8f5e8; border-radius: 5px; font-size: 14px; border-left: 3px solid ${statusColor};">
+                <strong>Осталось мест:</strong> ${remaining} из ${maxParticipants}
+                ${remaining <= 0 ? '<br><small style="color: var(--primary-red);">Регистрация закрыта</small>' : ''}
+            </div>`;
+        }
+    }
+    
+    if (message.includes('заполнить профиль')) {
+        messageEl.innerHTML = `<div class="alert alert-warning">${message}</div>${additionalInfo}`;
+        workLinkInput.style.display = 'none';
+        document.getElementById('submit-work-link').style.display = 'none';
+        
+        // Добавляем кнопку "Заполнить профиль"
+        const fillProfileBtn = document.createElement('button');
+        fillProfileBtn.className = 'button button-primary';
+        fillProfileBtn.innerHTML = '<i class="fas fa-user-edit"></i> Заполнить профиль';
+        fillProfileBtn.style.marginTop = '15px';
+        fillProfileBtn.style.width = '100%';
+        fillProfileBtn.onclick = function() {
+            hideWorkModal();
+            showPage('profile');
+        };
+        
+        messageEl.appendChild(fillProfileBtn);
+    } else {
+        messageEl.innerHTML = `<p>${message}</p>${additionalInfo}`;
+        workLinkInput.style.display = 'block';
+        document.getElementById('submit-work-link').style.display = 'block';
+    }
+    
+    workModal.style.display = 'flex';
+    workLinkInput.value = '';
+    workLinkInput.focus();
+}
+        
+        /*function showWorkModal(message) {
             const messageEl = document.getElementById('work-modal-message');
             if (message.includes('заполнить профиль')) {
                 messageEl.innerHTML = `<div class="alert alert-warning">${message}</div>`;
@@ -1351,10 +1783,130 @@
         
         function hideWorkModal() {
             workModal.style.display = 'none';
-        }
+        }*/
         
         // Отправить работу на конкурс
-        async function submitWork() {
+
+async function submitWork() {
+    const workUrl = workLinkInput.value.trim();
+    
+    if (!workUrl) {
+        showMessage('Ошибка', 'Пожалуйста, введите ссылку на работу');
+        return;
+    }
+    
+    // Проверяем, заполнен ли профиль
+    if (!appState.userProfile || !appState.userProfile.full_name) {
+        showMessage('Заполните профиль', 'Для участия в конкурсе необходимо заполнить профиль!', () => {
+            hideWorkModal();
+            showPage('profile');
+        });
+        return;
+    }
+    
+    try {
+        // Получаем информацию о конкурсе
+        const contest = appState.contests.find(c => c.id == appState.currentContestId);
+        if (!contest) {
+            showMessage('Ошибка', 'Конкурс не найден');
+            return;
+        }
+        
+        // Проверка 1: Конкурс еще активен?
+        if (new Date(contest.end_date) < new Date()) {
+            showMessage('Конкурс завершен', 'Конкурс уже завершен. Прием работ окончен.', () => {
+                hideWorkModal();
+            });
+            return;
+        }
+        
+        // Проверка 2: Конкурс уже начался?
+        if (new Date(contest.start_date) > new Date()) {
+            showMessage('Конкурс не начался', `Конкурс еще не начался. Прием работ начнется ${formatDate(contest.start_date)}`, () => {
+                hideWorkModal();
+            });
+            return;
+        }
+        
+        // Проверка 3: Максимальное число участников
+        const maxParticipants = contest.max_participants || 0;
+        const currentParticipants = contest.participant_count || 0;
+        
+        if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
+            showMessage('Места закончились', `Максимальное число участников (${maxParticipants}) уже достигнуто. Регистрация закрыта.`, () => {
+                hideWorkModal();
+            });
+            return;
+        }
+        
+        // Проверка 4: Участник уже отправил работу?
+        const { data: existingWork } = await supabase
+            .from('works')
+            .select('*')
+            .eq('contest_id', appState.currentContestId)
+            .eq('user_id', userId)
+            .single();
+            
+        if (existingWork) {
+            showMessage('Работа уже отправлена', 'Вы уже отправили работу на этот конкурс!', () => {
+                hideWorkModal();
+            });
+            return;
+        }
+        
+        // Добавляем работу в базу данных
+        const { error } = await supabase
+            .from('works')
+            .insert({
+                contest_id: appState.currentContestId,
+                user_id: userId,
+                work_url: workUrl,
+                votes: 0
+            });
+            
+        if (error) {
+            throw error;
+        }
+        
+        // Обновляем счетчик участников в конкурсе
+        const newCount = currentParticipants + 1;
+        
+        await supabase
+            .from('contests')
+            .update({ participant_count: newCount })
+            .eq('id', appState.currentContestId);
+        
+        showMessage('Успешно!', 'Ваша работа успешно отправлена на конкурс!', () => {
+            hideWorkModal();
+            
+            // Обновляем данные конкурса в локальном состоянии
+            contest.participant_count = newCount;
+            
+            // Обновляем страницу конкурса
+            showContestDetails(appState.currentContestId);
+        });
+        
+    } catch (error) {
+        console.error('Ошибка отправки работы:', error);
+        
+        let errorMessage = 'Ошибка при отправке работы. Попробуйте еще раз.';
+        let errorTitle = 'Ошибка';
+        
+        if (error.code === '23505') { // Ошибка уникальности PostgreSQL
+            errorMessage = 'Вы уже отправили работу на этот конкурс!';
+            errorTitle = 'Дублирование работы';
+        } else if (error.code === '42501') { // Ошибка прав доступа
+            errorMessage = 'Ошибка доступа. Пожалуйста, попробуйте еще раз.';
+            errorTitle = 'Ошибка доступа';
+        }
+        
+        showMessage(errorTitle, errorMessage, () => {
+            hideWorkModal();
+        });
+    }
+}
+        
+        /*async function submitWork() {
     const workUrl = workLinkInput.value.trim();
     
     if (!workUrl) {
@@ -1458,7 +2010,7 @@
             alert('Ошибка при отправке работы. Попробуйте еще раз.');
         }
     }
-}
+}*/
         /*async function submitWork() {
             const workUrl = workLinkInput.value.trim();
             
@@ -1759,8 +2311,63 @@ function showEditContestPage(contest) {
                 year: 'numeric'
             });
         }
+
+        // Функция для показа сообщений (замена alert)
+function showMessage(title, text, callback) {
+    const modal = document.getElementById('message-modal');
+    const titleEl = document.getElementById('message-title');
+    const textEl = document.getElementById('message-text');
+    const okBtn = document.getElementById('message-ok-btn');
+    
+    titleEl.textContent = title;
+    textEl.textContent = text;
+    
+    modal.style.display = 'flex';
+    
+    // Обработчик для кнопки OK
+    okBtn.onclick = function() {
+        modal.style.display = 'none';
+        if (typeof callback === 'function') {
+            callback();
+        }
+    };
+    
+    // Закрытие по клику на фон
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+            if (typeof callback === 'function') {
+                callback();
+            }
+        }
+    };
+    
+    // Закрытие по Escape
+    document.addEventListener('keydown', function closeOnEscape(event) {
+        if (event.key === 'Escape') {
+            modal.style.display = 'none';
+            if (typeof callback === 'function') {
+                callback();
+            }
+            document.removeEventListener('keydown', closeOnEscape);
+        }
+    });
+}
     </script>
+    <!-- Модальное окно для сообщений -->
+<div class="modal" id="message-modal">
+    <div class="modal-content" style="max-width: 350px;">
+        <h3 id="message-title"></h3>
+        <p id="message-text" style="margin: 20px 0; text-align: center;"></p>
+        <div class="form-actions" style="justify-content: center;">
+            <button class="button button-primary" id="message-ok-btn">
+                <i class="fas fa-check"></i> OK
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
