@@ -1692,7 +1692,7 @@ h1 {
                 // Рассчитываем процент
                 let percentage = 0;
                 if (contest.max_participants > 0) {
-                    percentage = Math.min((currentParticipants / contest.max_participants) * 100, 100);
+                    percentage = Math.min(Math.round((currentParticipants / contest.max_participants) * 100), 100);
                 }
                 
                 // Устанавливаем процент для прогресс-бара
@@ -1771,7 +1771,7 @@ h1 {
         if (contest.max_participants > 0) {
             const currentParticipants = contest.participant_count || 0;
             const maxParticipants = contest.max_participants;
-            const percentage = maxParticipants > 0 ? (currentParticipants / maxParticipants) * 100) : 0;
+            const percentage = maxParticipants > 0 ? Math.round((currentParticipants / maxParticipants) * 100) : 0;
             const remaining = maxParticipants - currentParticipants;
             
             let progressColor = 'var(--primary-green)';
@@ -2754,4 +2754,3 @@ h1 {
 </script>
 </body>
 </html>
-
