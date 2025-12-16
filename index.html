@@ -1637,9 +1637,8 @@ h1 {
         }
         
         // Загрузка конкурсов
-   async function loadContests() {
+async function loadContests() {
     try {
-        // Добавляем подсчет участников
         const { data, error } = await supabase
             .from('contests')
             .select(`
@@ -1663,7 +1662,7 @@ h1 {
         renderContestList();
     } catch (error) {
         console.error('Ошибка загрузки конкурсов:', error);
-        contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
+        contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсов. Попробуйте позже.</div>';
     }
 }
         /*async function loadContests() {
@@ -1688,7 +1687,101 @@ h1 {
         }*/
         
         // Отображение списка конкурсов
-        function renderContestList() {
+        // Отображение списка конкурсов
+function renderContestList() {
+    if (!appState.contests.length) {
+        contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
+        return;
+    }
+    
+    let html = '<div class="contest-list">';
+    
+    appState.contests.forEach(contest => {
+        const isEnded = new Date(contest.end_date) < new Date();
+        const statusClass = isEnded ? 'ended' : '';
+        const statusText = isEnded ? 'Завершен' : 'Активен';
+        const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
+        
+        // Форматируем количество участников
+        let participantsText = '';
+        let progressBarHtml = '';
+        const currentParticipants = contest.participant_count || 0;
+        
+        if (contest.max_participants > 0) {
+            participantsText = `${currentParticipants}/${contest.max_participants}`;
+            
+            // ВАЖНО: Рассчитываем процент с проверкой деления на ноль
+            let percentage = 0;
+            if (contest.max_participants > 0) {
+                // Округляем до целых, но убедимся, что не получаем 100% при нулевых участниках
+                percentage = Math.min(Math.round((currentParticipants / contest.max_participants) * 100), 100);
+            }
+            
+            // Устанавливаем процент для прогресс-бара
+            const displayPercentage = Math.max(percentage, 0);
+            
+            let progressColor = 'var(--primary-green)';
+            if (displayPercentage >= 90) {
+                progressColor = 'var(--primary-red)';
+            } else if (displayPercentage >= 70) {
+                progressColor = 'var(--light-red)';
+            } else if (displayPercentage >= 50) {
+                progressColor = 'goldenrod';
+            }
+            
+            progressBarHtml = `
+                <div class="contest-participants">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-users"></i> 
+                            <span>Участников: <strong>${participantsText}</strong></span>
+                        </div>
+                        ${contest.max_participants > 0 ? `
+                            <div style="width: 60px; height: 6px; background-color: var(--light-gray); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${displayPercentage}%; height: 100%; background-color: ${progressColor}; transition: width 0.5s ease;"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            participantsText = `${currentParticipants}`;
+            
+            progressBarHtml = `
+                <div class="contest-participants">
+                    <i class="fas fa-users"></i> Участников: <strong>${participantsText}</strong> (без ограничений)
+                </div>
+            `;
+        }
+        
+        html += `
+            <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
+                <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                <h3 class="contest-title">${contest.name}</h3>
+                <p class="contest-description">${contest.short_description}</p>
+                <div class="contest-details">
+                    <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
+                    <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
+                </div>
+                ${progressBarHtml}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    contestListContainer.innerHTML = html;
+    
+    // Добавляем обработчики кликов на карточки конкурсов
+    document.querySelectorAll('.contest-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const contestId = this.getAttribute('data-contest-id');
+            showContestDetails(contestId);
+        });
+    });
+}
+
+        
+        /*function renderContestList() {
             if (!appState.contests.length) {
                 contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
                 return;
@@ -1810,7 +1903,7 @@ if (contest.max_participants > 0) {
                     showContestDetails(contestId);
                 });
             });
-        }
+        }*/
         
         // Показать детали конкурса
         async function showContestDetails(contestId) {
@@ -2933,6 +3026,7 @@ if (contest.max_participants > 0) {
     </script>
 </body>
 </html>
+
 
 
 
