@@ -1190,1849 +1190,1567 @@ h1 {
         </div>
     </div>
     
-    <script>
-        // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.MainButton.hide();
+   <script>
+    // Инициализация Telegram Web App
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.MainButton.hide();
+    
+    // Получаем ID пользователя Telegram
+    const userId = tg.initDataUnsafe?.user?.id || 'test_user_123';
+    const userName = tg.initDataUnsafe?.user?.first_name || 'Пользователь';
+    const userLastName = tg.initDataUnsafe?.user?.last_name || '';
+    const fullUserName = userName + (userLastName ? ' ' + userLastName : '');
+    
+    // Инициализация Supabase
+    const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc'; 
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Состояние приложения
+    const appState = {
+        currentPage: 'home',
+        currentContestId: null,
+        isAdmin: false,
+        userProfile: null,
+        contests: [],
+        comments: [],
+        currentReplyTo: null
+    };
+    
+    // Хэш пароля администратора
+    const ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+    
+    // Элементы DOM
+    const homePage = document.getElementById('home-page');
+    const contestPage = document.getElementById('contest-page');
+    const votingPage = document.getElementById('voting-page');
+    const profilePage = document.getElementById('profile-page');
+    const adminContestPage = document.getElementById('admin-contest-page');
+    const contestListContainer = document.getElementById('contest-list-container');
+    const contestDetailContainer = document.getElementById('contest-detail-container');
+    const votingContainer = document.getElementById('voting-container');
+    
+    // Модальные окна
+    const adminModal = document.getElementById('admin-modal');
+    const workModal = document.getElementById('work-modal');
+    const messageModal = document.getElementById('message-modal');
+    const commentModal = document.getElementById('comment-modal');
+    const workLinkInput = document.getElementById('work-link');
+    const commentText = document.getElementById('comment-text');
+    const commentModalTitle = document.getElementById('comment-modal-title');
+    const replyToInfo = document.getElementById('reply-to-info');
+    
+    // Инициализация приложения
+    document.addEventListener('DOMContentLoaded', async () => {
+        setupEventListeners();
+        await loadUserProfile();
+        await loadContests();
+        checkAdminStatus();
+    });
+    
+    // Настройка обработчиков событий
+    function setupEventListeners() {
+        // Кнопка меню
+        document.getElementById('menu-button').addEventListener('click', toggleMenu);
         
-        // Получаем ID пользователя Telegram
-        const userId = tg.initDataUnsafe?.user?.id || 'test_user_123';
-        const userName = tg.initDataUnsafe?.user?.first_name || 'Пользователь';
-        const userLastName = tg.initDataUnsafe?.user?.last_name || '';
-        const fullUserName = userName + (userLastName ? ' ' + userLastName : '');
-        
-        // Инициализация Supabase
-        const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc'; 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Состояние приложения
-        const appState = {
-            currentPage: 'home',
-            currentContestId: null,
-            isAdmin: false,
-            userProfile: null,
-            contests: [],
-            comments: [],
-            currentReplyTo: null
-        };
-        
-        // Хэш пароля администратора
-        const ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
-        
-        // Элементы DOM
-        const homePage = document.getElementById('home-page');
-        const contestPage = document.getElementById('contest-page');
-        const votingPage = document.getElementById('voting-page');
-        const profilePage = document.getElementById('profile-page');
-        const adminContestPage = document.getElementById('admin-contest-page');
-        const contestListContainer = document.getElementById('contest-list-container');
-        const contestDetailContainer = document.getElementById('contest-detail-container');
-        const votingContainer = document.getElementById('voting-container');
-        
-        // Модальные окна
-        const adminModal = document.getElementById('admin-modal');
-        const workModal = document.getElementById('work-modal');
-        const messageModal = document.getElementById('message-modal');
-        const commentModal = document.getElementById('comment-modal');
-        const workLinkInput = document.getElementById('work-link');
-        const commentText = document.getElementById('comment-text');
-        const commentModalTitle = document.getElementById('comment-modal-title');
-        const replyToInfo = document.getElementById('reply-to-info');
-        
-        // Инициализация приложения
-        document.addEventListener('DOMContentLoaded', async () => {
-            setupEventListeners();
-            await loadUserProfile();
-            await loadContests();
-            checkAdminStatus();
+        // Пункты меню
+        document.getElementById('profile-menu-item').addEventListener('click', () => {
+            showPage('profile');
+            hideMenu();
         });
         
-        // Настройка обработчиков событий
-        function setupEventListeners() {
-            // Кнопка меню
-            document.getElementById('menu-button').addEventListener('click', toggleMenu);
-            
-            // Пункты меню
-            document.getElementById('profile-menu-item').addEventListener('click', () => {
-                showPage('profile');
-                hideMenu();
-            });
-            
-            document.getElementById('admin-menu-item').addEventListener('click', () => {
-                if (appState.isAdmin) {
-                    showPage('home');
-                } else {
-                    showAdminModal();
-                }
-                hideMenu();
-            });
-            
-            // Пункт меню "Добавить конкурс" (виден только админам)
-            const addContestMenuItem = document.getElementById('add-contest-menu-item');
-            if (addContestMenuItem) {
-                addContestMenuItem.addEventListener('click', () => {
-                    if (appState.isAdmin) {
-                        showAdminContestPage();
-                    } else {
-                        showAdminModal();
-                    }
-                    hideMenu();
-                });
-            }
-            
-            // Кнопка администратора в заголовке
-            document.getElementById('admin-login-btn').addEventListener('click', () => {
-                if (appState.isAdmin) {
-                    showPage('home');
-                } else {
-                    showAdminModal();
-                }
-            });
-            
-            // Кнопки "Назад"
-            document.getElementById('back-button-contest').addEventListener('click', () => showPage('home'));
-            document.getElementById('back-button-voting').addEventListener('click', () => showPage('contest'));
-            document.getElementById('back-button-profile').addEventListener('click', () => showPage('home'));
-            document.getElementById('back-button-admin').addEventListener('click', () => showPage('home'));
-            
-            // Кнопка сохранения профиля
-            document.getElementById('save-profile-btn').addEventListener('click', saveUserProfile);
-            
-            // Админ-модальное окно
-            document.getElementById('submit-admin-password').addEventListener('click', checkAdminPassword);
-            document.getElementById('cancel-admin-password').addEventListener('click', hideAdminModal);
-            
-            // Форма конкурса (админ)
-            document.getElementById('save-contest-btn').addEventListener('click', saveContest);
-            document.getElementById('cancel-contest-btn').addEventListener('click', () => showPage('home'));
-            document.getElementById('delete-contest-btn').addEventListener('click', deleteContest);
-            
-            // Модальное окно для работы
-            document.getElementById('submit-work-link').addEventListener('click', submitWork);
-            
-            // Кнопка OK в модальном окне сообщений
-            document.getElementById('message-ok-btn').addEventListener('click', hideMessageModal);
-            
-            // Модальное окно для комментариев
-            document.getElementById('submit-comment-btn').addEventListener('click', submitComment);
-            document.getElementById('cancel-comment-btn').addEventListener('click', hideCommentModal);
-            
-            // Закрытие модальных окон по клику на фон
-            adminModal.addEventListener('click', (e) => {
-                if (e.target === adminModal) hideAdminModal();
-            });
-            
-            workModal.addEventListener('click', (e) => {
-                if (e.target === workModal) hideWorkModal();
-            });
-            
-            messageModal.addEventListener('click', (e) => {
-                if (e.target === messageModal) hideMessageModal();
-            });
-            
-            commentModal.addEventListener('click', (e) => {
-                if (e.target === commentModal) hideCommentModal();
-            });
-        }
-        
-        // Функции для работы с модальными окнами
-        function showAdminModal() {
-            adminModal.style.display = 'flex';
-            document.getElementById('admin-password').focus();
-        }
-        
-        function hideAdminModal() {
-            adminModal.style.display = 'none';
-            document.getElementById('admin-password').value = '';
-        }
-        
-        function showWorkModal(message) {
-            const messageEl = document.getElementById('work-modal-message');
-            
-            // Получаем информацию о конкурсе
-            const contest = appState.contests.find(c => c.id == appState.currentContestId);
-            let additionalInfo = '';
-            
-            if (contest) {
-                const maxParticipants = contest.max_participants || 0;
-                const currentParticipants = contest.participant_count || 0;
-                
-                if (maxParticipants > 0) {
-                    const remaining = maxParticipants - currentParticipants;
-                    const statusColor = remaining > 0 ? 'var(--primary-green)' : 'var(--primary-red)';
-                    additionalInfo = `<div style="margin-top: 10px; padding: 8px; background-color: #e8f5e8; border-radius: 5px; font-size: 14px; border-left: 3px solid ${statusColor};">
-                        <strong>Осталось мест:</strong> ${remaining} из ${maxParticipants}
-                        ${remaining <= 0 ? '<br><small style="color: var(--primary-red);">Регистрация закрыта</small>' : ''}
-                    </div>`;
-                }
-            }
-            
-            if (message.includes('заполнить профиль')) {
-                messageEl.innerHTML = `<div class="alert alert-warning">${message}</div>${additionalInfo}`;
-                workLinkInput.style.display = 'none';
-                document.getElementById('submit-work-link').style.display = 'none';
-                
-                // Добавляем кнопку "Заполнить профиль"
-                const fillProfileBtn = document.createElement('button');
-                fillProfileBtn.className = 'button button-primary';
-                fillProfileBtn.innerHTML = '<i class="fas fa-user-edit"></i> Заполнить профиль';
-                fillProfileBtn.style.marginTop = '15px';
-                fillProfileBtn.style.width = '100%';
-                fillProfileBtn.onclick = function() {
-                    hideWorkModal();
-                    showPage('profile');
-                };
-                
-                messageEl.appendChild(fillProfileBtn);
+        document.getElementById('admin-menu-item').addEventListener('click', () => {
+            if (appState.isAdmin) {
+                showPage('home');
             } else {
-                messageEl.innerHTML = `<p>${message}</p>${additionalInfo}`;
-                workLinkInput.style.display = 'block';
-                document.getElementById('submit-work-link').style.display = 'block';
+                showAdminModal();
             }
-            
-            workModal.style.display = 'flex';
-            workLinkInput.value = '';
-            workLinkInput.focus();
+            hideMenu();
+        });
+        
+        // Пункт меню "Добавить конкурс" (виден только админам)
+        const addContestMenuItem = document.getElementById('add-contest-menu-item');
+        if (addContestMenuItem) {
+            addContestMenuItem.addEventListener('click', () => {
+                if (appState.isAdmin) {
+                    showAdminContestPage();
+                } else {
+                    showAdminModal();
+                }
+                hideMenu();
+            });
         }
         
-        function hideWorkModal() {
-            workModal.style.display = 'none';
-            workLinkInput.value = '';
+        // Кнопка администратора в заголовке
+        document.getElementById('admin-login-btn').addEventListener('click', () => {
+            if (appState.isAdmin) {
+                showPage('home');
+            } else {
+                showAdminModal();
+            }
+        });
+        
+        // Кнопки "Назад"
+        document.getElementById('back-button-contest').addEventListener('click', () => showPage('home'));
+        document.getElementById('back-button-voting').addEventListener('click', () => showPage('contest'));
+        document.getElementById('back-button-profile').addEventListener('click', () => showPage('home'));
+        document.getElementById('back-button-admin').addEventListener('click', () => showPage('home'));
+        
+        // Кнопка сохранения профиля
+        document.getElementById('save-profile-btn').addEventListener('click', saveUserProfile);
+        
+        // Админ-модальное окно
+        document.getElementById('submit-admin-password').addEventListener('click', checkAdminPassword);
+        document.getElementById('cancel-admin-password').addEventListener('click', hideAdminModal);
+        
+        // Форма конкурса (админ)
+        document.getElementById('save-contest-btn').addEventListener('click', saveContest);
+        document.getElementById('cancel-contest-btn').addEventListener('click', () => showPage('home'));
+        document.getElementById('delete-contest-btn').addEventListener('click', deleteContest);
+        
+        // Модальное окно для работы
+        document.getElementById('submit-work-link').addEventListener('click', submitWork);
+        
+        // Кнопка OK в модальном окне сообщений
+        document.getElementById('message-ok-btn').addEventListener('click', hideMessageModal);
+        
+        // Модальное окно для комментариев
+        document.getElementById('submit-comment-btn').addEventListener('click', submitComment);
+        document.getElementById('cancel-comment-btn').addEventListener('click', hideCommentModal);
+        
+        // Закрытие модальных окон по клику на фон
+        adminModal.addEventListener('click', (e) => {
+            if (e.target === adminModal) hideAdminModal();
+        });
+        
+        workModal.addEventListener('click', (e) => {
+            if (e.target === workModal) hideWorkModal();
+        });
+        
+        messageModal.addEventListener('click', (e) => {
+            if (e.target === messageModal) hideMessageModal();
+        });
+        
+        commentModal.addEventListener('click', (e) => {
+            if (e.target === commentModal) hideCommentModal();
+        });
+    }
+    
+    // Функции для работы с модальными окнами
+    function showAdminModal() {
+        adminModal.style.display = 'flex';
+        document.getElementById('admin-password').focus();
+    }
+    
+    function hideAdminModal() {
+        adminModal.style.display = 'none';
+        document.getElementById('admin-password').value = '';
+    }
+    
+    function showWorkModal(message) {
+        const messageEl = document.getElementById('work-modal-message');
+        
+        // Получаем информацию о конкурсе
+        const contest = appState.contests.find(c => c.id == appState.currentContestId);
+        let additionalInfo = '';
+        
+        if (contest) {
+            const maxParticipants = contest.max_participants || 0;
+            const currentParticipants = contest.participant_count || 0;
+            
+            if (maxParticipants > 0) {
+                const remaining = maxParticipants - currentParticipants;
+                const statusColor = remaining > 0 ? 'var(--primary-green)' : 'var(--primary-red)';
+                additionalInfo = `<div style="margin-top: 10px; padding: 8px; background-color: #e8f5e8; border-radius: 5px; font-size: 14px; border-left: 3px solid ${statusColor};">
+                    <strong>Осталось мест:</strong> ${remaining} из ${maxParticipants}
+                    ${remaining <= 0 ? '<br><small style="color: var(--primary-red);">Регистрация закрыта</small>' : ''}
+                </div>`;
+            }
         }
         
-        function showMessage(title, text, callback) {
-            const titleEl = document.getElementById('message-title');
-            const textEl = document.getElementById('message-text');
-            const okBtn = document.getElementById('message-ok-btn');
+        if (message.includes('заполнить профиль')) {
+            messageEl.innerHTML = `<div class="alert alert-warning">${message}</div>${additionalInfo}`;
+            workLinkInput.style.display = 'none';
+            document.getElementById('submit-work-link').style.display = 'none';
             
-            titleEl.textContent = title;
-            textEl.textContent = text;
+            // Добавляем кнопку "Заполнить профиль"
+            const fillProfileBtn = document.createElement('button');
+            fillProfileBtn.className = 'button button-primary';
+            fillProfileBtn.innerHTML = '<i class="fas fa-user-edit"></i> Заполнить профиль';
+            fillProfileBtn.style.marginTop = '15px';
+            fillProfileBtn.style.width = '100%';
+            fillProfileBtn.onclick = function() {
+                hideWorkModal();
+                showPage('profile');
+            };
             
-            messageModal.style.display = 'flex';
-            
-            // Обработчик для кнопки OK
-            const handleOkClick = function() {
+            messageEl.appendChild(fillProfileBtn);
+        } else {
+            messageEl.innerHTML = `<p>${message}</p>${additionalInfo}`;
+            workLinkInput.style.display = 'block';
+            document.getElementById('submit-work-link').style.display = 'block';
+        }
+        
+        workModal.style.display = 'flex';
+        workLinkInput.value = '';
+        workLinkInput.focus();
+    }
+    
+    function hideWorkModal() {
+        workModal.style.display = 'none';
+        workLinkInput.value = '';
+    }
+    
+    function showMessage(title, text, callback) {
+        const titleEl = document.getElementById('message-title');
+        const textEl = document.getElementById('message-text');
+        const okBtn = document.getElementById('message-ok-btn');
+        
+        titleEl.textContent = title;
+        textEl.textContent = text;
+        
+        messageModal.style.display = 'flex';
+        
+        // Обработчик для кнопки OK
+        const handleOkClick = function() {
+            hideMessageModal();
+            if (typeof callback === 'function') {
+                callback();
+            }
+            okBtn.removeEventListener('click', handleOkClick);
+        };
+        
+        okBtn.addEventListener('click', handleOkClick);
+        
+        // Закрытие по клику на фон
+        const handleModalClick = function(event) {
+            if (event.target === messageModal) {
                 hideMessageModal();
                 if (typeof callback === 'function') {
                     callback();
                 }
-                okBtn.removeEventListener('click', handleOkClick);
-            };
-            
-            okBtn.addEventListener('click', handleOkClick);
-            
-            // Закрытие по клику на фон
-            const handleModalClick = function(event) {
-                if (event.target === messageModal) {
-                    hideMessageModal();
-                    if (typeof callback === 'function') {
-                        callback();
-                    }
-                    messageModal.removeEventListener('click', handleModalClick);
-                }
-            };
-            
-            messageModal.addEventListener('click', handleModalClick);
-            
-            // Закрытие по Escape
-            const closeOnEscape = function(event) {
-                if (event.key === 'Escape') {
-                    hideMessageModal();
-                    if (typeof callback === 'function') {
-                        callback();
-                    }
-                    document.removeEventListener('keydown', closeOnEscape);
-                }
-            };
-            
-            document.addEventListener('keydown', closeOnEscape);
-        }
-        
-        function hideMessageModal() {
-            messageModal.style.display = 'none';
-        }
-        
-        function showCommentModal(isReply = false, parentComment = null) {
-            commentText.value = '';
-            appState.currentReplyTo = parentComment;
-            
-            if (isReply && parentComment) {
-                commentModalTitle.textContent = 'Ответить на комментарий';
-                replyToInfo.innerHTML = `Ответ пользователю <strong>${parentComment.username}</strong>`;
-                replyToInfo.style.display = 'block';
-            } else {
-                commentModalTitle.textContent = 'Добавить комментарий';
-                replyToInfo.style.display = 'none';
+                messageModal.removeEventListener('click', handleModalClick);
             }
-            
-            commentModal.style.display = 'flex';
-            commentText.focus();
-        }
+        };
         
-        function hideCommentModal() {
-            commentModal.style.display = 'none';
-            commentText.value = '';
+        messageModal.addEventListener('click', handleModalClick);
+        
+        // Закрытие по Escape
+        const closeOnEscape = function(event) {
+            if (event.key === 'Escape') {
+                hideMessageModal();
+                if (typeof callback === 'function') {
+                    callback();
+                }
+                document.removeEventListener('keydown', closeOnEscape);
+            }
+        };
+        
+        document.addEventListener('keydown', closeOnEscape);
+    }
+    
+    function hideMessageModal() {
+        messageModal.style.display = 'none';
+    }
+    
+    function showCommentModal(isReply = false, parentComment = null) {
+        commentText.value = '';
+        appState.currentReplyTo = parentComment;
+        
+        if (isReply && parentComment) {
+            commentModalTitle.textContent = 'Ответить на комментарий';
+            replyToInfo.innerHTML = `Ответ пользователю <strong>${parentComment.username}</strong>`;
+            replyToInfo.style.display = 'block';
+        } else {
+            commentModalTitle.textContent = 'Добавить комментарий';
             replyToInfo.style.display = 'none';
-            appState.currentReplyTo = null;
         }
         
-        // Показать/скрыть меню
-        function toggleMenu() {
-            const menu = document.getElementById('menu-dropdown');
-            menu.classList.toggle('show');
+        commentModal.style.display = 'flex';
+        commentText.focus();
+    }
+    
+    function hideCommentModal() {
+        commentModal.style.display = 'none';
+        commentText.value = '';
+        replyToInfo.style.display = 'none';
+        appState.currentReplyTo = null;
+    }
+    
+    // Показать/скрыть меню
+    function toggleMenu() {
+        const menu = document.getElementById('menu-dropdown');
+        menu.classList.toggle('show');
+    }
+    
+    function hideMenu() {
+        const menu = document.getElementById('menu-dropdown');
+        menu.classList.remove('show');
+    }
+    
+    // Переключение между страницами
+    function showPage(page) {
+        // Скрыть все страницы
+        homePage.classList.add('hidden');
+        contestPage.classList.add('hidden');
+        votingPage.classList.add('hidden');
+        profilePage.classList.add('hidden');
+        adminContestPage.classList.add('hidden');
+        
+        // Показать нужную страницу
+        switch(page) {
+            case 'home':
+                homePage.classList.remove('hidden');
+                appState.currentPage = 'home';
+                break;
+            case 'contest':
+                contestPage.classList.remove('hidden');
+                appState.currentPage = 'contest';
+                break;
+            case 'voting':
+                votingPage.classList.remove('hidden');
+                appState.currentPage = 'voting';
+                break;
+            case 'profile':
+                profilePage.classList.remove('hidden');
+                appState.currentPage = 'profile';
+                break;
+            case 'admin-contest':
+                adminContestPage.classList.remove('hidden');
+                appState.currentPage = 'admin-contest';
+                break;
         }
         
-        function hideMenu() {
-            const menu = document.getElementById('menu-dropdown');
-            menu.classList.remove('show');
-        }
+        // Всегда скрывать меню при переходе
+        hideMenu();
+    }
+    
+    // Проверка статуса администратора
+    function checkAdminStatus() {
+        const adminBtn = document.getElementById('admin-login-btn');
+        const adminMenuItem = document.getElementById('admin-menu-item');
+        const addContestMenuItem = document.getElementById('add-contest-menu-item');
         
-        // Переключение между страницами
-        function showPage(page) {
-            // Скрыть все страницы
-            homePage.classList.add('hidden');
-            contestPage.classList.add('hidden');
-            votingPage.classList.add('hidden');
-            profilePage.classList.add('hidden');
-            adminContestPage.classList.add('hidden');
-            
-            // Показать нужную страницу
-            switch(page) {
-                case 'home':
-                    homePage.classList.remove('hidden');
-                    appState.currentPage = 'home';
-                    break;
-                case 'contest':
-                    contestPage.classList.remove('hidden');
-                    appState.currentPage = 'contest';
-                    break;
-                case 'voting':
-                    votingPage.classList.remove('hidden');
-                    appState.currentPage = 'voting';
-                    break;
-                case 'profile':
-                    profilePage.classList.remove('hidden');
-                    appState.currentPage = 'profile';
-                    break;
-                case 'admin-contest':
-                    adminContestPage.classList.remove('hidden');
-                    appState.currentPage = 'admin-contest';
-                    break;
+        if (appState.isAdmin) {
+            adminMenuItem.innerHTML = '<i class="fas fa-user-cog"></i> Админ-панель';
+            if (addContestMenuItem) {
+                addContestMenuItem.style.display = 'flex';
             }
-            
-            // Всегда скрывать меню при переходе
-            hideMenu();
-        }
-        
-        // Проверка статуса администратора
-        function checkAdminStatus() {
-            const adminBtn = document.getElementById('admin-login-btn');
-            const adminMenuItem = document.getElementById('admin-menu-item');
-            const addContestMenuItem = document.getElementById('add-contest-menu-item');
-            
-            if (appState.isAdmin) {
-                adminMenuItem.innerHTML = '<i class="fas fa-user-cog"></i> Админ-панель';
-                if (addContestMenuItem) {
-                    addContestMenuItem.style.display = 'flex';
-                }
-            } else {
-                adminBtn.style.display = 'none'; // Скрываем кнопку "Войти как админ"
-                adminMenuItem.innerHTML = '<i class="fas fa-lock"></i> Админ-панель';
-                if (addContestMenuItem) {
-                    addContestMenuItem.style.display = 'none';
-                }
-            }
-        }
-        
-        // Проверка пароля администратора
-        async function checkAdminPassword() {
-            const password = document.getElementById('admin-password').value;
-            
-            if (!password) {
-                showMessage('Ошибка', 'Введите пароль');
-                return;
-            }
-            
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            
-            if (hashHex === ADMIN_PASSWORD_HASH) {
-                appState.isAdmin = true;
-                checkAdminStatus();
-                hideAdminModal();
-                showMessage('Успех', 'Вы вошли в режим администратора', () => {
-                    showPage('home');
-                });
-            } else {
-                showMessage('Ошибка', 'Неверный пароль!');
+        } else {
+            adminBtn.style.display = 'none'; // Скрываем кнопку "Войти как админ"
+            adminMenuItem.innerHTML = '<i class="fas fa-lock"></i> Админ-панель';
+            if (addContestMenuItem) {
+                addContestMenuItem.style.display = 'none';
             }
         }
+    }
+    
+    // Проверка пароля администратора
+    async function checkAdminPassword() {
+        const password = document.getElementById('admin-password').value;
         
-        // Загрузка профиля пользователя
-        async function loadUserProfile() {
-            try {
-                const { data, error } = await supabase
-                    .from('participants')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .single();
-                    
-                if (error && error.code !== 'PGRST116') {
-                    console.error('Ошибка загрузки профиля:', error);
-                    return;
-                }
+        if (!password) {
+            showMessage('Ошибка', 'Введите пароль');
+            return;
+        }
+        
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        if (hashHex === ADMIN_PASSWORD_HASH) {
+            appState.isAdmin = true;
+            checkAdminStatus();
+            hideAdminModal();
+            showMessage('Успех', 'Вы вошли в режим администратора', () => {
+                showPage('home');
+            });
+        } else {
+            showMessage('Ошибка', 'Неверный пароль!');
+        }
+    }
+    
+    // Загрузка профиля пользователя
+    async function loadUserProfile() {
+        try {
+            const { data, error } = await supabase
+                .from('participants')
+                .select('*')
+                .eq('user_id', userId)
+                .single();
                 
-                if (data) {
-                    appState.userProfile = data;
-                    
-                    // Заполняем форму профиля
-                    document.getElementById('full-name').value = data.full_name || '';
-                    document.getElementById('age').value = data.age || '';
-                    document.getElementById('group').value = data.group || '';
-                    document.getElementById('email').value = data.email || '';
-                }
-            } catch (error) {
+            if (error && error.code !== 'PGRST116') {
                 console.error('Ошибка загрузки профиля:', error);
-            }
-        }
-        
-        // Сохранение профиля пользователя
-        async function saveUserProfile() {
-            const profileData = {
-                user_id: userId,
-                full_name: document.getElementById('full-name').value.trim(),
-                age: parseInt(document.getElementById('age').value) || null,
-                group: document.getElementById('group').value.trim(),
-                email: document.getElementById('email').value.trim()
-            };
-            
-            // Валидация
-            if (!profileData.full_name) {
-                showMessage('Ошибка', 'Пожалуйста, введите ваше ФИО');
                 return;
             }
             
-            try {
-                const { error } = await supabase
-                    .from('participants')
-                    .upsert(profileData, { onConflict: 'user_id' });
-                    
-                if (error) {
-                    throw error;
-                }
+            if (data) {
+                appState.userProfile = data;
                 
-                appState.userProfile = profileData;
-                showMessage('Успех', 'Профиль успешно сохранен!', () => {
-                    showPage('home');
-                });
-            } catch (error) {
-                console.error('Ошибка сохранения профиля:', error);
-                showMessage('Ошибка', 'Ошибка сохранения профиля. Попробуйте еще раз.');
+                // Заполняем форму профиля
+                document.getElementById('full-name').value = data.full_name || '';
+                document.getElementById('age').value = data.age || '';
+                document.getElementById('group').value = data.group || '';
+                document.getElementById('email').value = data.email || '';
             }
+        } catch (error) {
+            console.error('Ошибка загрузки профиля:', error);
+        }
+    }
+    
+    // Сохранение профиля пользователя
+    async function saveUserProfile() {
+        const profileData = {
+            user_id: userId,
+            full_name: document.getElementById('full-name').value.trim(),
+            age: parseInt(document.getElementById('age').value) || null,
+            group: document.getElementById('group').value.trim(),
+            email: document.getElementById('email').value.trim()
+        };
+        
+        // Валидация
+        if (!profileData.full_name) {
+            showMessage('Ошибка', 'Пожалуйста, введите ваше ФИО');
+            return;
         }
         
-        // Загрузка конкурсов
-async function loadContests() {
-    try {
-        const { data, error } = await supabase
-            .from('contests')
-            .select(`
-                *,
-                works:works(count)
-            `)
-            .order('start_date', { ascending: false });
+        try {
+            const { error } = await supabase
+                .from('participants')
+                .upsert(profileData, { onConflict: 'user_id' });
+                
+            if (error) {
+                throw error;
+            }
             
-        if (error) throw error;
-        
-        console.log('Данные из базы:', data);
-        
-        // Преобразуем данные
-        appState.contests = data.map(contest => ({
-            ...contest,
-            participant_count: contest.works?.[0]?.count || 0
-        }));
-        
-        console.log('Конкурсы после обработки:', appState.contests);
-        
-        renderContestList();
-    } catch (error) {
-        console.error('Ошибка загрузки конкурсов:', error);
-        contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсов. Попробуйте позже.</div>';
+            appState.userProfile = profileData;
+            showMessage('Успех', 'Профиль успешно сохранен!', () => {
+                showPage('home');
+            });
+        } catch (error) {
+            console.error('Ошибка сохранения профиля:', error);
+            showMessage('Ошибка', 'Ошибка сохранения профиля. Попробуйте еще раз.');
+        }
     }
-}
-        /*async function loadContests() {
-            contestListContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Загрузка конкурсов...</p></div>';
+    
+    // Загрузка конкурсов
+    async function loadContests() {
+        try {
+            const { data, error } = await supabase
+                .from('contests')
+                .select(`
+                    *,
+                    works:works(count)
+                `)
+                .order('start_date', { ascending: false });
+                
+            if (error) throw error;
             
-            try {
-                const { data, error } = await supabase
-                    .from('contests')
-                    .select('*')
-                    .order('start_date', { ascending: false });
-                    
-                if (error) {
-                    throw error;
+            console.log('Данные из базы:', data);
+            
+            // Преобразуем данные
+            appState.contests = data.map(contest => ({
+                ...contest,
+                participant_count: contest.works?.[0]?.count || 0
+            }));
+            
+            console.log('Конкурсы после обработки:', appState.contests);
+            
+            renderContestList();
+        } catch (error) {
+            console.error('Ошибка загрузки конкурсов:', error);
+            contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
+        }
+    }
+    
+    // Отображение списка конкурсов
+    function renderContestList() {
+        if (!appState.contests || appState.contests.length === 0) {
+            contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
+            return;
+        }
+        
+        let html = '<div class="contest-list">';
+        
+        appState.contests.forEach(contest => {
+            const isEnded = new Date(contest.end_date) < new Date();
+            const statusClass = isEnded ? 'ended' : '';
+            const statusText = isEnded ? 'Завершен' : 'Активен';
+            const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
+            
+            // Форматируем количество участников
+            const currentParticipants = contest.participant_count || 0;
+            let participantsText = '';
+            let progressBarHtml = '';
+            
+            if (contest.max_participants > 0) {
+                participantsText = `${currentParticipants}/${contest.max_participants}`;
+                
+                // Рассчитываем процент
+                let percentage = 0;
+                if (contest.max_participants > 0) {
+                    percentage = Math.min(Math.round((currentParticipants / contest.max_participants) * 100), 100);
                 }
                 
-                appState.contests = data || [];
-                renderContestList();
-            } catch (error) {
-                console.error('Ошибка загрузки конкурсов:', error);
-                contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
-            }
-        }*/
-        
-        // Отображение списка конкурсов
-        // Отображение списка конкурсов
-function renderContestList() {
-    if (!appState.contests.length) {
-        contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
-        return;
-    }
-    
-    let html = '<div class="contest-list">';
-    
-    appState.contests.forEach(contest => {
-        const isEnded = new Date(contest.end_date) < new Date();
-        const statusClass = isEnded ? 'ended' : '';
-        const statusText = isEnded ? 'Завершен' : 'Активен';
-        const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
-        
-        // Форматируем количество участников
-        let participantsText = '';
-        let progressBarHtml = '';
-        const currentParticipants = contest.participant_count || 0;
-        
-        if (contest.max_participants > 0) {
-            participantsText = `${currentParticipants}/${contest.max_participants}`;
-            
-            // ВАЖНО: Рассчитываем процент с проверкой деления на ноль
-            let percentage = 0;
-            if (contest.max_participants > 0) {
-                // Округляем до целых, но убедимся, что не получаем 100% при нулевых участниках
-                percentage = Math.min(Math.round((currentParticipants / contest.max_participants) * 100), 100);
-            }
-            
-            // Устанавливаем процент для прогресс-бара
-            const displayPercentage = Math.max(percentage, 0);
-            
-            let progressColor = 'var(--primary-green)';
-            if (displayPercentage >= 90) {
-                progressColor = 'var(--primary-red)';
-            } else if (displayPercentage >= 70) {
-                progressColor = 'var(--light-red)';
-            } else if (displayPercentage >= 50) {
-                progressColor = 'goldenrod';
-            }
-            
-            progressBarHtml = `
-                <div class="contest-participants">
-                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <i class="fas fa-users"></i> 
-                            <span>Участников: <strong>${participantsText}</strong></span>
-                        </div>
-                        ${contest.max_participants > 0 ? `
+                // Устанавливаем процент для прогресс-бара
+                const displayPercentage = Math.max(percentage, 0);
+                
+                let progressColor = 'var(--primary-green)';
+                if (displayPercentage >= 90) {
+                    progressColor = 'var(--primary-red)';
+                } else if (displayPercentage >= 70) {
+                    progressColor = 'var(--light-red)';
+                } else if (displayPercentage >= 50) {
+                    progressColor = 'goldenrod';
+                }
+                
+                progressBarHtml = `
+                    <div class="contest-participants">
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-users"></i> 
+                                <span>Участников: <strong>${participantsText}</strong></span>
+                            </div>
                             <div style="width: 60px; height: 6px; background-color: var(--light-gray); border-radius: 3px; overflow: hidden;">
                                 <div style="width: ${displayPercentage}%; height: 100%; background-color: ${progressColor}; transition: width 0.5s ease;"></div>
                             </div>
-                        ` : ''}
+                        </div>
+                    </div>
+                `;
+            } else {
+                participantsText = `${currentParticipants}`;
+                
+                progressBarHtml = `
+                    <div class="contest-participants">
+                        <i class="fas fa-users"></i> Участников: <strong>${participantsText}</strong> (без ограничений)
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
+                    <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                    <h3 class="contest-title">${contest.name}</h3>
+                    <p class="contest-description">${contest.short_description}</p>
+                    <div class="contest-details">
+                        <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
+                        <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
+                    </div>
+                    ${progressBarHtml}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        contestListContainer.innerHTML = html;
+        
+        // Добавляем обработчики кликов на карточки конкурсов
+        document.querySelectorAll('.contest-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const contestId = this.getAttribute('data-contest-id');
+                showContestDetails(contestId);
+            });
+        });
+    }
+    
+    // Показать детали конкурса
+    async function showContestDetails(contestId) {
+        const contest = appState.contests.find(c => c.id == contestId);
+        if (!contest) return;
+        
+        appState.currentContestId = contestId;
+        const isEnded = new Date(contest.end_date) < new Date();
+        const statusText = isEnded ? 'Завершен' : 'Активен';
+        const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
+        
+        // Форматируем информацию об участниках
+        let participantsInfo = '';
+        if (contest.max_participants > 0) {
+            const currentParticipants = contest.participant_count || 0;
+            const maxParticipants = contest.max_participants;
+            const percentage = maxParticipants > 0 ? Math.round((currentParticipants / maxParticipants) * 100) : 0;
+            const remaining = maxParticipants - currentParticipants;
+            
+            let progressColor = 'var(--primary-green)';
+            if (percentage >= 90) {
+                progressColor = 'var(--primary-red)';
+            } else if (percentage >= 70) {
+                progressColor = 'var(--light-red)';
+            } else if (percentage >= 50) {
+                progressColor = 'goldenrod';
+            }
+            
+            participantsInfo = `
+                <div style="margin: 15px 0; padding: 15px; background-color: #f8f9fa; border-radius: 10px; border-left: 4px solid var(--primary-green);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 600; color: var(--primary-green);">
+                            <i class="fas fa-user-check"></i> Участники: 
+                            <span style="font-size: 18px; margin-left: 5px;">${currentParticipants}/${maxParticipants}</span>
+                        </div>
+                        <div style="font-size: 14px; color: ${remaining > 0 ? 'var(--primary-green)' : 'var(--primary-red)'};">
+                            ${remaining > 0 ? `Осталось мест: ${remaining}` : 'Места закончились'}
+                        </div>
+                    </div>
+                    <div style="width: 100%; height: 8px; background-color: var(--light-gray); border-radius: 4px; overflow: hidden;">
+                        <div style="width: ${percentage}%; height: 100%; background-color: ${progressColor};"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: var(--dark-gray);">
+                        <span>0</span>
+                        <span>${maxParticipants}</span>
                     </div>
                 </div>
             `;
         } else {
-            participantsText = `${currentParticipants}`;
-            
-            progressBarHtml = `
-                <div class="contest-participants">
-                    <i class="fas fa-users"></i> Участников: <strong>${participantsText}</strong> (без ограничений)
+            participantsInfo = `
+                <div style="margin: 15px 0; padding: 10px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--primary-green);">
+                    <i class="fas fa-users"></i> <strong>Участников:</strong> ${contest.participant_count || 0} (без ограничений)
                 </div>
             `;
         }
         
-        html += `
-            <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
+        // Проверяем, отправил ли пользователь уже работу
+        let userWork = null;
+        try {
+            const { data } = await supabase
+                .from('works')
+                .select('*')
+                .eq('contest_id', contestId)
+                .eq('user_id', userId)
+                .single();
+                
+            userWork = data;
+        } catch (error) {
+            // Работа не найдена
+        }
+        
+        let buttonsHtml = '';
+        
+        if (appState.isAdmin) {
+            // Админ видит кнопки редактирования и удаления
+            buttonsHtml = `
+                <div class="contest-actions">
+                    <button class="button button-primary" id="edit-contest-btn">
+                        <i class="fas fa-edit"></i> Редактировать конкурс
+                    </button>
+                    <button class="button button-secondary" id="delete-contest-btn-details">
+                        <i class="fas fa-trash"></i> Удалить конкурс
+                    </button>
+                </div>
+            `;
+        } else {
+            // Обычный пользователь
+            if (!isEnded && !userWork) {
+                const canParticipate = contest.max_participants === 0 || 
+                                    (contest.participant_count || 0) < contest.max_participants;
+                
+                const buttonText = canParticipate ? 
+                    '<i class="fas fa-paperclip"></i> Прикрепить работу' :
+                    '<i class="fas fa-times-circle"></i> Мест нет';
+                
+                const buttonClass = canParticipate ? 'button-primary' : 'button-disabled';
+                
+                buttonsHtml = `
+                    <div class="contest-actions">
+                        <button class="button ${buttonClass}" id="attach-work-btn" ${!canParticipate ? 'disabled' : ''}>
+                            ${buttonText}
+                        </button>
+                        <button class="button button-secondary" id="voting-btn">
+                            <i class="fas fa-vote-yea"></i> Голосование
+                        </button>
+                    </div>
+                `;
+            } else if (!isEnded && userWork) {
+                buttonsHtml = `
+                    <div class="contest-actions">
+                        <div class="alert alert-success">Вы уже отправили работу на этот конкурс!</div>
+                        <button class="button button-secondary" id="voting-btn">
+                            <i class="fas fa-vote-yea"></i> Голосование
+                        </button>
+                    </div>
+                `;
+            } else {
+                buttonsHtml = `
+                    <div class="contest-actions">
+                        <button class="button button-secondary" id="voting-btn">
+                            <i class="fas fa-vote-yea"></i> Голосование
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        const contestDetailContainerHTML = `
+            <div class="contest-detail-card">
                 <span class="status-badge ${statusBadgeClass}">${statusText}</span>
-                <h3 class="contest-title">${contest.name}</h3>
-                <p class="contest-description">${contest.short_description}</p>
-                <div class="contest-details">
+                <h2 style="color: var(--primary-green); margin-bottom: 15px;">${contest.name}</h2>
+                
+                ${participantsInfo}
+                
+                <div class="contest-details" style="margin-bottom: 20px;">
                     <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
                     <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
                 </div>
-                ${progressBarHtml}
+                
+                <div class="contest-full-description">
+                    <h3>Описание конкурса</h3>
+                    <p>${contest.full_description}</p>
+                </div>
+                
+                <div class="contest-rules">
+                    <h3>Правила конкурса</h3>
+                    <p>${contest.rules}</p>
+                </div>
+                
+                ${buttonsHtml}
+                
+                <!-- Секция комментариев -->
+                <div class="comments-section" id="comments-section">
+                    <!-- Комментарии будут загружены здесь -->
+                </div>
             </div>
         `;
-    });
-    
-    html += '</div>';
-    contestListContainer.innerHTML = html;
-    
-    // Добавляем обработчики кликов на карточки конкурсов
-    document.querySelectorAll('.contest-card').forEach(card => {
-        card.addEventListener('click', function() {
-            const contestId = this.getAttribute('data-contest-id');
-            showContestDetails(contestId);
-        });
-    });
-}
-
         
-        /*function renderContestList() {
-            if (!appState.contests.length) {
-                contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
-                return;
-            }
-            
-            let html = '<div class="contest-list">';
-            
-            appState.contests.forEach(contest => {
-                const isEnded = new Date(contest.end_date) < new Date();
-                const statusClass = isEnded ? 'ended' : '';
-                const statusText = isEnded ? 'Завершен' : 'Активен';
-                const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
-                
-                // Форматируем количество участников
-                let participantsText = '';
-                /*if (contest.max_participants > 0) {
-                    participantsText = `${contest.participant_count || 0}/${contest.max_participants}`;
-                    
-                    const percentage = Math.round(((contest.participant_count || 0) / contest.max_participants) * 100);
-                    let progressColor = 'var(--primary-green)';
-                    
-                    if (percentage >= 90) {
-                        progressColor = 'var(--primary-red)';
-                    } else if (percentage >= 70) {
-                        progressColor = 'var(--light-red)';
-                    } else if (percentage >= 50) {
-                        progressColor = 'goldenrod';
-                    }
-                    
-                    html += `
-                        <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
-                            <span class="status-badge ${statusBadgeClass}">${statusText}</span>
-                            <h3 class="contest-title">${contest.name}</h3>
-                            <p class="contest-description">${contest.short_description}</p>
-                            <div class="contest-details">
-                                <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
-                                <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
-                            </div>
-                            <div class="contest-participants">
-                                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                                    <div style="display: flex; align-items: center; gap: 5px;">
-                                        <i class="fas fa-users"></i> 
-                                        <span>Участников: <strong>${participantsText}</strong></span>
-                                    </div>
-                                    <div style="width: 60px; height: 6px; background-color: var(--light-gray); border-radius: 3px; overflow: hidden;">
-                                        <div style="width: ${percentage}%; height: 100%; background-color: ${progressColor};"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }*/
-                // В функции renderContestList, внутри условия if (contest.max_participants > 0):
-if (contest.max_participants > 0) {
-    participantsText = `${contest.participant_count || 0}/${contest.max_participants}`;
-    
-    // ВАЖНО: Проверяем, что max_participants > 0
-    const percentage = contest.max_participants > 0 ? 
-        Math.round(((contest.participant_count || 0) / contest.max_participants) * 100) : 0;
-    
-    let progressColor = 'var(--primary-green)';
-    if (percentage >= 90) {
-        progressColor = 'var(--primary-red)';
-    } else if (percentage >= 70) {
-        progressColor = 'var(--light-red)';
-    } else if (percentage >= 50) {
-        progressColor = 'goldenrod';
-    }
-    
-    html += `
-        <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
-            <span class="status-badge ${statusBadgeClass}">${statusText}</span>
-            <h3 class="contest-title">${contest.name}</h3>
-            <p class="contest-description">${contest.short_description}</p>
-            <div class="contest-details">
-                <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
-                <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
-            </div>
-            <div class="contest-participants">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-users"></i> 
-                        <span>Участников: <strong>${participantsText}</strong></span>
-                    </div>
-                    <div style="width: 60px; height: 6px; background-color: var(--light-gray); border-radius: 3px; overflow: hidden;">
-                        <div style="width: ${percentage}%; height: 100%; background-color: ${progressColor};"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}else {
-                    participantsText = `${contest.participant_count || 0}`;
-                    
-                    html += `
-                        <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
-                            <span class="status-badge ${statusBadgeClass}">${statusText}</span>
-                            <h3 class="contest-title">${contest.name}</h3>
-                            <p class="contest-description">${contest.short_description}</p>
-                            <div class="contest-details">
-                                <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
-                                <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
-                            </div>
-                            <div class="contest-participants">
-                                <i class="fas fa-users"></i> Участников: <strong>${participantsText}</strong> (без ограничений)
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            
-            html += '</div>';
-            contestListContainer.innerHTML = html;
-            
-            // Добавляем обработчики кликов на карточки конкурсов
-            document.querySelectorAll('.contest-card').forEach(card => {
-                card.addEventListener('click', function() {
-                    const contestId = this.getAttribute('data-contest-id');
-                    showContestDetails(contestId);
-                });
-            });
-        }*/
+        contestDetailContainer.innerHTML = contestDetailContainerHTML;
+        showPage('contest');
         
-        // Показать детали конкурса
-        async function showContestDetails(contestId) {
-            const contest = appState.contests.find(c => c.id == contestId);
-            if (!contest) return;
-            
-            appState.currentContestId = contestId;
-            const isEnded = new Date(contest.end_date) < new Date();
-            const statusText = isEnded ? 'Завершен' : 'Активен';
-            const statusBadgeClass = isEnded ? 'status-ended' : 'status-active';
-            
-            // Форматируем информацию об участниках
-// Форматируем информацию об участниках
-let participantsInfo = '';
-if (contest.max_participants > 0) {
-    const currentParticipants = contest.participant_count || 0;
-    const maxParticipants = contest.max_participants;
-    const percentage = maxParticipants > 0 ? Math.round((currentParticipants / maxParticipants) * 100) : 0;
-    const remaining = maxParticipants - currentParticipants;
-    
-    let progressColor = 'var(--primary-green)';
-    if (percentage >= 90) {
-        progressColor = 'var(--primary-red)';
-    } else if (percentage >= 70) {
-        progressColor = 'var(--light-red)';
-    } else if (percentage >= 50) {
-        progressColor = 'goldenrod';
-    }
-    
-    participantsInfo = `
-        <div style="margin: 15px 0; padding: 15px; background-color: #f8f9fa; border-radius: 10px; border-left: 4px solid var(--primary-green);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <div style="font-weight: 600; color: var(--primary-green);">
-                    <i class="fas fa-user-check"></i> Участники: 
-                    <span style="font-size: 18px; margin-left: 5px;">${currentParticipants}/${maxParticipants}</span>
-                </div>
-                <div style="font-size: 14px; color: ${remaining > 0 ? 'var(--primary-green)' : 'var(--primary-red)'};">
-                    ${remaining > 0 ? `Осталось мест: ${remaining}` : 'Места закончились'}
-                </div>
-            </div>
-            <div style="width: 100%; height: 8px; background-color: var(--light-gray); border-radius: 4px; overflow: hidden;">
-                <div style="width: ${percentage}%; height: 100%; background-color: ${progressColor};"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: var(--dark-gray);">
-                <span>0</span>
-                <span>${maxParticipants}</span>
-            </div>
-        </div>
-    `;
-} else {
-    participantsInfo = `
-        <div style="margin: 15px 0; padding: 10px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--primary-green);">
-            <i class="fas fa-users"></i> <strong>Участников:</strong> ${contest.participant_count || 0} (без ограничений)
-        </div>
-    `;
-}
-            
-            /*let participantsInfo = '';
-            if (contest.max_participants > 0) {
-    const currentParticipants = contest.participant_count || 0;
-    const maxParticipants = contest.max_participants;
-    const percentage = maxParticipants > 0 ? Math.round((currentParticipants / maxParticipants) * 100) : 0;
-    
-    let progressColor = 'var(--primary-green)';
-    if (percentage >= 90) {
-        progressColor = 'var(--primary-red)';
-    } else if (percentage >= 70) {
-        progressColor = 'var(--light-red)';
-    } else if (percentage >= 50) {
-        progressColor = 'goldenrod';
-    }
-    
-    html += `
-        <div class="contest-card ${statusClass}" data-contest-id="${contest.id}">
-            <!-- ... остальной HTML ... -->
-            <div class="contest-participants">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-users"></i> 
-                        <span>Участников: <strong>${currentParticipants}/${maxParticipants}</strong></span>
-                    </div>
-                    <div style="width: 60px; height: 6px; background-color: var(--light-gray); border-radius: 3px; overflow: hidden;">
-                        ${maxParticipants > 0 ? `
-                            <div style="width: ${percentage}%; height: 100%; background-color: ${progressColor};"></div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-} else {
-                participantsInfo = `
-                    <div style="margin: 15px 0; padding: 10px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--primary-green);">
-                        <i class="fas fa-users"></i> <strong>Участников:</strong> ${contest.participant_count || 0} (без ограничений)
-                    </div>
-                `;
-            }*/
-            
-            // Проверяем, отправил ли пользователь уже работу
-            let userWork = null;
-            try {
-                const { data } = await supabase
-                    .from('works')
-                    .select('*')
-                    .eq('contest_id', contestId)
-                    .eq('user_id', userId)
-                    .single();
-                    
-                userWork = data;
-            } catch (error) {
-                // Работа не найдена
-            }
-            
-            let buttonsHtml = '';
-            
-            if (appState.isAdmin) {
-                // Админ видит кнопки редактирования и удаления
-                buttonsHtml = `
-                    <div class="contest-actions">
-                        <button class="button button-primary" id="edit-contest-btn">
-                            <i class="fas fa-edit"></i> Редактировать конкурс
-                        </button>
-                        <button class="button button-secondary" id="delete-contest-btn-details">
-                            <i class="fas fa-trash"></i> Удалить конкурс
-                        </button>
-                    </div>
-                `;
-            } else {
-                // Обычный пользователь
-                if (!isEnded && !userWork) {
-                    const canParticipate = contest.max_participants === 0 || 
-                                        (contest.participant_count || 0) < contest.max_participants;
-                    
-                    const buttonText = canParticipate ? 
-                        '<i class="fas fa-paperclip"></i> Прикрепить работу' :
-                        '<i class="fas fa-times-circle"></i> Мест нет';
-                    
-                    const buttonClass = canParticipate ? 'button-primary' : 'button-disabled';
-                    
-                    buttonsHtml = `
-                        <div class="contest-actions">
-                            <button class="button ${buttonClass}" id="attach-work-btn" ${!canParticipate ? 'disabled' : ''}>
-                                ${buttonText}
-                            </button>
-                            <button class="button button-secondary" id="voting-btn">
-                                <i class="fas fa-vote-yea"></i> Голосование
-                            </button>
-                        </div>
-                    `;
-                } else if (!isEnded && userWork) {
-                    buttonsHtml = `
-                        <div class="contest-actions">
-                            <div class="alert alert-success">Вы уже отправили работу на этот конкурс!</div>
-                            <button class="button button-secondary" id="voting-btn">
-                                <i class="fas fa-vote-yea"></i> Голосование
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    buttonsHtml = `
-                        <div class="contest-actions">
-                            <button class="button button-secondary" id="voting-btn">
-                                <i class="fas fa-vote-yea"></i> Голосование
-                            </button>
-                        </div>
-                    `;
-                }
-            }
-            
-            const contestDetailContainerHTML = `
-                <div class="contest-detail-card">
-                    <span class="status-badge ${statusBadgeClass}">${statusText}</span>
-                    <h2 style="color: var(--primary-green); margin-bottom: 15px;">${contest.name}</h2>
-                    
-                    ${participantsInfo}
-                    
-                    <div class="contest-details" style="margin-bottom: 20px;">
-                        <span><i class="far fa-calendar-alt"></i> Начало: ${formatDate(contest.start_date)}</span>
-                        <span><i class="far fa-calendar-check"></i> Конец: ${formatDate(contest.end_date)}</span>
-                    </div>
-                    
-                    <div class="contest-full-description">
-                        <h3>Описание конкурса</h3>
-                        <p>${contest.full_description}</p>
-                    </div>
-                    
-                    <div class="contest-rules">
-                        <h3>Правила конкурса</h3>
-                        <p>${contest.rules}</p>
-                    </div>
-                    
-                    ${buttonsHtml}
-                    
-                    <!-- Секция комментариев -->
-                    <div class="comments-section" id="comments-section">
-                        <!-- Комментарии будут загружены здесь -->
-                    </div>
-                </div>
-            `;
-            
-            contestDetailContainer.innerHTML = contestDetailContainerHTML;
-            showPage('contest');
-            
-            // Загружаем комментарии после отображения страницы
-            await loadComments();
-            
-            // Добавляем обработчики для кнопок
-            if (!appState.isAdmin) {
-                const attachBtn = document.getElementById('attach-work-btn');
-                if (attachBtn && !attachBtn.disabled) {
-                    attachBtn.addEventListener('click', () => {
-                        if (!appState.userProfile || !appState.userProfile.full_name) {
-                            showWorkModal('Для участия в конкурсе необходимо заполнить профиль!');
-                        } else {
-                            const contest = appState.contests.find(c => c.id == appState.currentContestId);
-                            
-                            if (new Date(contest.end_date) < new Date()) {
-                                showMessage('Конкурс завершен', 'Конкурс уже завершен. Прием работ окончен.');
-                                return;
-                            }
-                            
-                            if (new Date(contest.start_date) > new Date()) {
-                                showMessage('Конкурс не начался', `Конкурс еще не начался. Прием работ начнется ${formatDate(contest.start_date)}`);
-                                return;
-                            }
-                            
-                            const maxParticipants = contest.max_participants || 0;
-                            const currentParticipants = contest.participant_count || 0;
-                            
-                            if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
-                                showMessage('Места закончились', `Все места уже заняты. Максимальное число участников: ${maxParticipants}`);
-                                return;
-                            }
-                            
-                            showWorkModal('Введите ссылку на вашу работу:');
-                        }
-                    });
-                }
-                
-                const votingBtn = document.getElementById('voting-btn');
-                if (votingBtn) {
-                    votingBtn.addEventListener('click', () => showVotingPage(contestId));
-                }
-            } else {
-                const editBtn = document.getElementById('edit-contest-btn');
-                if (editBtn) {
-                    editBtn.addEventListener('click', () => showEditContestPage(contest));
-                }
-                
-                const deleteBtn = document.getElementById('delete-contest-btn-details');
-                if (deleteBtn) {
-                    deleteBtn.addEventListener('click', () => {
-                        showMessage('Подтверждение', 'Вы уверены, что хотите удалить этот конкурс? Это действие нельзя отменить.', () => {
-                            deleteContest(contestId);
-                        });
-                    });
-                }
-            }
-        }
+        // Загружаем комментарии после отображения страницы
+        await loadComments();
         
-        // ========== СИСТЕМА КОММЕНТАРИЕВ ==========
-        
-        // Загрузка комментариев
-        async function loadComments() {
-            try {
-                // Загружаем все комментарии для конкурса
-                const { data: comments, error } = await supabase
-                    .from('comments')
-                    .select('*')
-                    .eq('contest_id', appState.currentContestId)
-                    .order('created_at', { ascending: true });
-                    
-                if (error) {
-                    throw error;
-                }
-                
-                // Сохраняем комментарии в состоянии приложения
-                appState.comments = comments || [];
-                
-                // Строим дерево комментариев
-                const commentTree = buildCommentTree(appState.comments);
-                renderComments(commentTree);
-                
-            } catch (error) {
-                console.error('Ошибка загрузки комментариев:', error);
-                showMessage('Ошибка', 'Не удалось загрузить комментарии');
-            }
-        }
-        
-        // Построение дерева комментариев
-        function buildCommentTree(comments) {
-            const commentMap = {};
-            const roots = [];
-            
-            comments.forEach(comment => {
-                comment.replies = [];
-                commentMap[comment.id] = comment;
-            });
-            
-            comments.forEach(comment => {
-                if (comment.parent_id) {
-                    const parent = commentMap[comment.parent_id];
-                    if (parent) {
-                        parent.replies.push(comment);
+        // Добавляем обработчики для кнопок
+        if (!appState.isAdmin) {
+            const attachBtn = document.getElementById('attach-work-btn');
+            if (attachBtn && !attachBtn.disabled) {
+                attachBtn.addEventListener('click', () => {
+                    if (!appState.userProfile || !appState.userProfile.full_name) {
+                        showWorkModal('Для участия в конкурсе необходимо заполнить профиль!');
                     } else {
-                        roots.push(comment);
+                        const contest = appState.contests.find(c => c.id == appState.currentContestId);
+                        
+                        if (new Date(contest.end_date) < new Date()) {
+                            showMessage('Конкурс завершен', 'Конкурс уже завершен. Прием работ окончен.');
+                            return;
+                        }
+                        
+                        if (new Date(contest.start_date) > new Date()) {
+                            showMessage('Конкурс не начался', `Конкурс еще не начался. Прием работ начнется ${formatDate(contest.start_date)}`);
+                            return;
+                        }
+                        
+                        const maxParticipants = contest.max_participants || 0;
+                        const currentParticipants = contest.participant_count || 0;
+                        
+                        if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
+                            showMessage('Места закончились', `Все места уже заняты. Максимальное число участников: ${maxParticipants}`);
+                            return;
+                        }
+                        
+                        showWorkModal('Введите ссылку на вашу работу:');
                     }
+                });
+            }
+            
+            const votingBtn = document.getElementById('voting-btn');
+            if (votingBtn) {
+                votingBtn.addEventListener('click', () => showVotingPage(contestId));
+            }
+        } else {
+            const editBtn = document.getElementById('edit-contest-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', () => showEditContestPage(contest));
+            }
+            
+            const deleteBtn = document.getElementById('delete-contest-btn-details');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    showMessage('Подтверждение', 'Вы уверены, что хотите удалить этот конкурс? Это действие нельзя отменить.', () => {
+                        deleteContest(contestId);
+                    });
+                });
+            }
+        }
+    }
+    
+    // ========== СИСТЕМА КОММЕНТАРИЕВ ==========
+    
+    // Загрузка комментариев
+    async function loadComments() {
+        try {
+            // Загружаем все комментарии для конкурса
+            const { data: comments, error } = await supabase
+                .from('comments')
+                .select('*')
+                .eq('contest_id', appState.currentContestId)
+                .order('created_at', { ascending: true });
+                
+            if (error) {
+                throw error;
+            }
+            
+            // Сохраняем комментарии в состоянии приложения
+            appState.comments = comments || [];
+            
+            // Строим дерево комментариев
+            const commentTree = buildCommentTree(appState.comments);
+            renderComments(commentTree);
+            
+        } catch (error) {
+            console.error('Ошибка загрузки комментариев:', error);
+            showMessage('Ошибка', 'Не удалось загрузить комментарии');
+        }
+    }
+    
+    // Построение дерева комментариев
+    function buildCommentTree(comments) {
+        const commentMap = {};
+        const roots = [];
+        
+        comments.forEach(comment => {
+            comment.replies = [];
+            commentMap[comment.id] = comment;
+        });
+        
+        comments.forEach(comment => {
+            if (comment.parent_id) {
+                const parent = commentMap[comment.parent_id];
+                if (parent) {
+                    parent.replies.push(comment);
                 } else {
                     roots.push(comment);
                 }
-            });
-            
-            return roots;
-        }
-        
-        // Отображение комментариев
-        function renderComments(commentTree) {
-            const commentsSection = document.getElementById('comments-section');
-            if (!commentsSection) return;
-            
-            let commentsHtml = '';
-            
-            if (!commentTree || commentTree.length === 0) {
-                commentsHtml = `
-                    <div class="comments-header">
-                        <h3 class="comments-title">
-                            <i class="far fa-comments"></i> Комментарии (0)
-                        </h3>
-                        <button class="add-comment-btn" id="add-comment-btn">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    <div class="no-comments">
-                        <i class="far fa-comment-dots" style="font-size: 40px; margin-bottom: 10px; color: var(--primary-green);"></i>
-                        <p>Пока нет комментариев. Будьте первым!</p>
-                    </div>
-                `;
             } else {
-                const totalComments = appState.comments.length;
-                
-                commentsHtml = `
-                    <div class="comments-header">
-                        <h3 class="comments-title">
-                            <i class="far fa-comments"></i> Комментарии (${totalComments})
-                        </h3>
-                        <button class="add-comment-btn" id="add-comment-btn">
-                            <i class="fas fa-plus"></i> 
-                        </button>
-                    </div>
-                    <div class="comments-list" id="comments-list">
-                `;
-                
-                commentTree.forEach(comment => {
-                    commentsHtml += renderCommentWithReplies(comment, 0);
-                });
-                
-                commentsHtml += '</div>';
-            }
-            
-            commentsSection.innerHTML = commentsHtml;
-            
-            // Добавляем обработчики событий для новой кнопки добавления комментария
-            const addCommentBtn = document.getElementById('add-comment-btn');
-            if (addCommentBtn) {
-                addCommentBtn.addEventListener('click', () => {
-                    showCommentModal(false);
-                });
-            }
-            
-            // Добавляем обработчики для кнопок комментариев
-            setTimeout(() => {
-    // Кнопки "Ответить" теперь есть только на комментариях без parent_id
-    document.querySelectorAll('.reply-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
-            const comment = appState.comments.find(c => c.id === commentId);
-            if (comment) {
-                showCommentModal(true, comment);
+                roots.push(comment);
             }
         });
-    });
-    
-    document.querySelectorAll('.delete-comment-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
-            deleteComment(commentId);
-        });
-    });
-}, 100);
-            /*setTimeout(() => {
-                document.querySelectorAll('.reply-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
-                        const comment = appState.comments.find(c => c.id === commentId);
-                        if (comment) {
-                            showCommentModal(true, comment);
-                        }
-                    });
-                });
-                
-                document.querySelectorAll('.delete-comment-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
-                        deleteComment(commentId);
-                    });
-                });
-            }, 100);*/
-        }
         
-        // Рендеринг комментария с рекурсивными ответами
-
-        function renderCommentWithReplies(comment, level) {
-    const isReply = level > 0;
+        return roots;
+    }
     
-    const canDelete = appState.isAdmin || (comment.user_id && comment.user_id.toString() === userId.toString());
-    const timeAgo = getTimeAgo(comment.created_at);
-    
-    let html = `
-        <div class="comment-card ${isReply ? 'reply' : ''}" data-comment-id="${comment.id}">
-            <div class="comment-header">
-                <div class="comment-user">
-                    <div class="comment-avatar">
-                        ${comment.username ? comment.username.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div class="comment-user-info">
-                        <div class="comment-username">${comment.username || 'Аноним'}</div>
-                        <div class="comment-time">${timeAgo}</div>
-                    </div>
-                </div>
-                ${canDelete ? `
-                    <button class="comment-action-btn delete-btn delete-comment-btn" title="Удалить комментарий">
-                        <i class="fas fa-trash"></i>
+    // Отображение комментариев
+    function renderComments(commentTree) {
+        const commentsSection = document.getElementById('comments-section');
+        if (!commentsSection) return;
+        
+        let commentsHtml = '';
+        
+        if (!commentTree || commentTree.length === 0) {
+            commentsHtml = `
+                <div class="comments-header">
+                    <h3 class="comments-title">
+                        <i class="far fa-comments"></i> Комментарии (0)
+                    </h3>
+                    <button class="add-comment-btn" id="add-comment-btn">
+                        <i class="fas fa-plus"></i>
                     </button>
-                ` : ''}
-            </div>
-            <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
-    `;
-    
-    // ВАЖНОЕ ИЗМЕНЕНИЕ: Показываем кнопку "Ответить" только на комментариях ПЕРВОГО уровня
-    if (!isReply) {
-        html += `
-            <div class="comment-actions">
-                <button class="comment-action-btn reply-btn">
-                    <i class="fas fa-reply"></i> Ответить
-                </button>
-            </div>
-        `;
-    }
-    
-    if (comment.replies && comment.replies.length > 0) {
-        comment.replies.forEach(reply => {
-            html += renderCommentWithReplies(reply, level + 1);
-        });
-    }
-    
-    html += '</div>';
-    return html;
-}
-        
-        /*function renderCommentWithReplies(comment, level) {
-            const isReply = level > 0;
+                </div>
+                <div class="no-comments">
+                    <i class="far fa-comment-dots" style="font-size: 40px; margin-bottom: 10px; color: var(--primary-green);"></i>
+                    <p>Пока нет комментариев. Будьте первым!</p>
+                </div>
+            `;
+        } else {
+            const totalComments = appState.comments.length;
             
-            // ВАЖНОЕ ИСПРАВЛЕНИЕ: Проверяем, может ли пользователь удалить комментарий
-            // Комментарий может быть удален если:
-            // 1. Пользователь является администратором (appState.isAdmin = true)
-            // 2. ID пользователя в комментарии совпадает с ID текущего пользователя
-            // 
-            // ВАЖНО: Проверяем, что comment.user_id существует и совпадает с userId
-            // userId - это ID пользователя Telegram, который получаем из tg.initDataUnsafe?.user?.id
-            // comment.user_id - это ID пользователя, сохраненный в базе данных при создании комментария
-            
-            const canDelete = appState.isAdmin || (comment.user_id && comment.user_id.toString() === userId.toString());
-            const timeAgo = getTimeAgo(comment.created_at);
-            
-            let html = `
-                <div class="comment-card ${isReply ? 'reply' : ''}" data-comment-id="${comment.id}">
-                    <div class="comment-header">
-                        <div class="comment-user">
-                            <div class="comment-avatar">
-                                ${comment.username ? comment.username.charAt(0).toUpperCase() : '?'}
-                            </div>
-                            <div class="comment-user-info">
-                                <div class="comment-username">${comment.username || 'Аноним'}</div>
-                                <div class="comment-time">${timeAgo}</div>
-                            </div>
-                        </div>
-                        ${canDelete ? `
-                            <button class="comment-action-btn delete-btn delete-comment-btn" title="Удалить комментарий">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        ` : ''}
-                    </div>
-                    <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
-                    <div class="comment-actions">
-                        <button class="comment-action-btn reply-btn">
-                            <i class="fas fa-reply"></i> Ответить
-                        </button>
-                    </div>
+            commentsHtml = `
+                <div class="comments-header">
+                    <h3 class="comments-title">
+                        <i class="far fa-comments"></i> Комментарии (${totalComments})
+                    </h3>
+                    <button class="add-comment-btn" id="add-comment-btn">
+                        <i class="fas fa-plus"></i> 
+                    </button>
+                </div>
+                <div class="comments-list" id="comments-list">
             `;
             
-            if (comment.replies && comment.replies.length > 0) {
-                comment.replies.forEach(reply => {
-                    html += renderCommentWithReplies(reply, level + 1);
-                });
-            }
+            commentTree.forEach(comment => {
+                commentsHtml += renderCommentWithReplies(comment, 0);
+            });
             
-            html += '</div>';
-            return html;
-        }*/
-        
-        // Отправка комментария
-        async function submitComment() {
-            const text = commentText.value.trim();
-            
-            if (!text) {
-                showMessage('Ошибка', 'Пожалуйста, введите текст комментария');
-                return;
-            }
-            
-            if (text.length > 1000) {
-                showMessage('Ошибка', 'Комментарий не должен превышать 1000 символов');
-                return;
-            }
-            
-            try {
-                const commentData = {
-                    contest_id: appState.currentContestId,
-                    user_id: userId,
-                    username: fullUserName || 'Аноним',
-                    comment_text: text
-                };
-                
-                if (appState.currentReplyTo) {
-                    commentData.parent_id = appState.currentReplyTo.id;
-                }
-                
-                const { error } = await supabase
-                    .from('comments')
-                    .insert(commentData);
-                    
-                if (error) {
-                    throw error;
-                }
-                
-                // Закрываем модальное окно ДО показа сообщения
-                hideCommentModal();
-                
-                // Показываем сообщение об успехе
-                showMessage('Успех', appState.currentReplyTo ? 'Ответ успешно добавлен!' : 'Комментарий успешно добавлен!', () => {
-                    // Обновляем комментарии после закрытия сообщения
-                    loadComments();
-                });
-                
-            } catch (error) {
-                console.error('Ошибка добавления комментария:', error);
-                showMessage('Ошибка', 'Не удалось добавить комментарий. Попробуйте еще раз.');
-            }
+            commentsHtml += '</div>';
         }
         
-        // Удаление комментария
-        async function deleteComment(commentId) {
-            showMessage('Подтверждение', 'Вы уверены, что хотите удалить этот комментарий? Все ответы также будут удалены.', async () => {
-                try {
-                    const commentToDelete = appState.comments.find(c => c.id === commentId);
-                    if (!commentToDelete) {
-                        showMessage('Ошибка', 'Комментарий не найден');
-                        return;
-                    }
-                    
-                    // ВАЖНОЕ ИСПРАВЛЕНИЕ: Та же логика проверки прав
-                    const canDelete = appState.isAdmin || (commentToDelete.user_id && commentToDelete.user_id.toString() === userId.toString());
-                    
-                    if (!canDelete) {
-                        showMessage('Ошибка', 'У вас нет прав для удаления этого комментария');
-                        return;
-                    }
-                    
-                    const repliesIds = getCommentRepliesIds(commentId, appState.comments);
-                    const allIdsToDelete = [commentId, ...repliesIds];
-                    
-                    const { error } = await supabase
-                        .from('comments')
-                        .delete()
-                        .in('id', allIdsToDelete);
-                        
-                    if (error) {
-                        throw error;
-                    }
-                    
-                    appState.comments = appState.comments.filter(c => !allIdsToDelete.includes(c.id));
-                    
-                    const commentTree = buildCommentTree(appState.comments);
-                    renderComments(commentTree);
-                    
-                    showMessage('Успех', 'Комментарий успешно удален!');
-                    
-                } catch (error) {
-                    console.error('Ошибка удаления комментария:', error);
-                    showMessage('Ошибка', 'Не удалось удалить комментарий. Попробуйте еще раз.');
-                }
+        commentsSection.innerHTML = commentsHtml;
+        
+        // Добавляем обработчики событий для новой кнопки добавления комментария
+        const addCommentBtn = document.getElementById('add-comment-btn');
+        if (addCommentBtn) {
+            addCommentBtn.addEventListener('click', () => {
+                showCommentModal(false);
             });
         }
         
-        // Получение всех ID ответов на комментарий
-        function getCommentRepliesIds(commentId, allComments) {
-            const repliesIds = [];
-            
-            const directReplies = allComments.filter(c => c.parent_id === commentId);
-            
-            directReplies.forEach(reply => {
-                repliesIds.push(reply.id);
-                const nestedReplies = getCommentRepliesIds(reply.id, allComments);
-                repliesIds.push(...nestedReplies);
+        // Добавляем обработчики для кнопок комментариев
+        setTimeout(() => {
+            document.querySelectorAll('.reply-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
+                    const comment = appState.comments.find(c => c.id === commentId);
+                    if (comment) {
+                        showCommentModal(true, comment);
+                    }
+                });
             });
             
-            return repliesIds;
-        }
+            document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
+                    deleteComment(commentId);
+                });
+            });
+        }, 100);
+    }
+    
+    // Рендеринг комментария с рекурсивными ответами
+    function renderCommentWithReplies(comment, level) {
+        const isReply = level > 0;
         
-        // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
+        const canDelete = appState.isAdmin || (comment.user_id && comment.user_id.toString() === userId.toString());
+        const timeAgo = getTimeAgo(comment.created_at);
         
-        // Показать страницу голосования
-        async function showVotingPage(contestId) {
-            const contest = appState.contests.find(c => c.id == contestId);
-            if (!contest) return;
-            
-            appState.currentContestId = contestId;
-            const isEnded = new Date(contest.end_date) < new Date();
-            
-            try {
-                const { data: works, error } = await supabase
-                    .from('works')
-                    .select(`
-                        *,
-                        participant:participants(full_name, age, group)
-                    `)
-                    .eq('contest_id', contestId)
-                    .order('votes', { ascending: false });
-                    
-                if (error) {
-                    throw error;
-                }
-                
-                let participantsHtml = '';
-                
-                if (!works || works.length === 0) {
-                    participantsHtml = '<div class="alert alert-info">На данный момент нет участников в этом конкурсе.</div>';
-                } else {
-                    participantsHtml = '<div class="participants-list">';
-                    
-                    const userVotes = await getUserVotes(contestId, userId);
-                    
-                    let place = 1;
-                    works.forEach((work, index) => {
-                        let placeBadge = '';
-                        if (isEnded) {
-                            if (place === 1) placeBadge = '<span class="winner-badge">1 место</span>';
-                            else if (place === 2) placeBadge = '<span class="winner-badge">2 место</span>';
-                            else if (place === 3) placeBadge = '<span class="winner-badge">3 место</span>';
-                            
-                            if (index < works.length - 1 && works[index + 1].votes < work.votes) {
-                                place++;
-                            } else if (index === works.length - 1) {
-                            } else if (works[index + 1].votes === work.votes) {
-                            } else {
-                                place++;
-                            }
-                        }
-                        
-                        const participantInfo = work.participant || {};
-                        const hasVoted = userVotes.some(vote => vote.participant_id === work.user_id);
-                        const isCurrentUser = work.user_id === userId;
-                        
-                        participantsHtml += `
-                            <div class="participant-card ${place <= 3 && isEnded ? 'winner' : ''}">
-                                <div class="participant-info">
-                                    <h4>${participantInfo.full_name || 'Участник'} ${placeBadge}</h4>
-                                    <div class="participant-details">
-                                        <span>Возраст: ${participantInfo.age || 'Не указан'}</span>
-                                        <span>Группа: ${participantInfo.group || 'Не указана'}</span>
-                                    </div>
-                                    <p style="margin-top: 8px;">
-                                        <a href="${work.work_url}" target="_blank" style="color: var(--primary-red);">
-                                            <i class="fas fa-external-link-alt"></i> Посмотреть работу
-                                        </a>
-                                    </p>
-                                    <p style="margin-top: 5px; color: var(--primary-green); font-weight: 500;">
-                                        <i class="fas fa-heart"></i> Голосов: ${work.votes || 0}
-                                    </p>
-                                </div>
-                                
-                                ${!isEnded && !hasVoted && !isCurrentUser ? `
-                                    <button class="vote-button" data-participant-id="${work.user_id}">
-                                        <i class="fas fa-heart"></i> Отдать голос
-                                    </button>
-                                ` : ''}
-                                
-                                ${hasVoted ? `
-                                    <span style="color: var(--primary-green); font-weight: 500;">
-                                        <i class="fas fa-check-circle"></i> Вы проголосовали
-                                    </span>
-                                ` : ''}
-                            </div>
-                        `;
-                    });
-                    
-                    participantsHtml += '</div>';
-                }
-                
-                votingContainer.innerHTML = `
-                    <div class="contest-detail-card">
-                        <h2 style="color: var(--primary-green); margin-bottom: 15px;">Голосование: ${contest.name}</h2>
-                        <p style="margin-bottom: 20px; color: var(--dark-gray);">
-                            ${isEnded ? 'Конкурс завершен. Результаты:' : 'Отдайте свой голос за понравившуюся работу:'}
-                        </p>
-                        ${participantsHtml}
+        let html = `
+            <div class="comment-card ${isReply ? 'reply' : ''}" data-comment-id="${comment.id}">
+                <div class="comment-header">
+                    <div class="comment-user">
+                        <div class="comment-avatar">
+                            ${comment.username ? comment.username.charAt(0).toUpperCase() : '?'}
+                        </div>
+                        <div class="comment-user-info">
+                            <div class="comment-username">${comment.username || 'Аноним'}</div>
+                            <div class="comment-time">${timeAgo}</div>
+                        </div>
                     </div>
-                `;
-                
-                showPage('voting');
-                
-                if (!isEnded) {
-                    document.querySelectorAll('.vote-button').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const participantId = this.getAttribute('data-participant-id');
-                            voteForParticipant(contestId, participantId);
-                        });
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Ошибка загрузки участников:', error);
-                votingContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить участников. Попробуйте позже.</div>';
-                showPage('voting');
-            }
+                    ${canDelete ? `
+                        <button class="comment-action-btn delete-btn delete-comment-btn" title="Удалить комментарий">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
+        `;
+        
+        if (!isReply) {
+            html += `
+                <div class="comment-actions">
+                    <button class="comment-action-btn reply-btn">
+                        <i class="fas fa-reply"></i> Ответить
+                    </button>
+                </div>
+            `;
         }
         
-        // Получить голоса пользователя для конкурса
-        async function getUserVotes(contestId, voterId) {
-            try {
-                const { data, error } = await supabase
-                    .from('votes')
-                    .select('*')
-                    .eq('contest_id', contestId)
-                    .eq('voter_id', voterId);
-                    
-                if (error) {
-                    throw error;
-                }
-                
-                return data || [];
-            } catch (error) {
-                console.error('Ошибка загрузки голосов:', error);
-                return [];
-            }
+        if (comment.replies && comment.replies.length > 0) {
+            comment.replies.forEach(reply => {
+                html += renderCommentWithReplies(reply, level + 1);
+            });
         }
         
-        // Голосование за участника
-        async function voteForParticipant(contestId, participantId) {
-            try {
-                const { data: existingVote } = await supabase
-                    .from('votes')
-                    .select('*')
-                    .eq('contest_id', contestId)
-                    .eq('participant_id', participantId)
-                    .eq('voter_id', userId)
-                    .single();
-                    
-                if (existingVote) {
-                    showMessage('Ошибка', 'Вы уже голосовали за этого участника!');
-                    return;
-                }
-                
-                const { error: voteError } = await supabase
-                    .from('votes')
-                    .insert({
-                        contest_id: contestId,
-                        participant_id: participantId,
-                        voter_id: userId
-                    });
-                    
-                if (voteError) {
-                    throw voteError;
-                }
-                
-                const { error: workError } = await supabase.rpc('increment_votes', {
-                    work_contest_id: contestId,
-                    work_user_id: participantId
-                });
-                
-                if (workError) {
-                    throw workError;
-                }
-                
-                showMessage('Успех', 'Ваш голос учтен!', () => {
-                    showVotingPage(contestId);
-                });
-                
-            } catch (error) {
-                console.error('Ошибка голосования:', error);
-                showMessage('Ошибка', 'Ошибка при голосовании. Попробуйте еще раз.');
-            }
+        html += '</div>';
+        return html;
+    }
+    
+    // Отправка комментария
+    async function submitComment() {
+        const text = commentText.value.trim();
+        
+        if (!text) {
+            showMessage('Ошибка', 'Пожалуйста, введите текст комментария');
+            return;
         }
         
-        // Отправить работу на конкурс
-        async function submitWork() {
-            const workUrl = workLinkInput.value.trim();
-            
-            if (!workUrl) {
-                showMessage('Ошибка', 'Пожалуйста, введите ссылку на работу');
-                return;
-            }
-            
-            if (!appState.userProfile || !appState.userProfile.full_name) {
-                showMessage('Заполните профиль', 'Для участия в конкурсе необходимо заполнить профиль!', () => {
-                    hideWorkModal();
-                    showPage('profile');
-                });
-                return;
-            }
-            
-            try {
-                const contest = appState.contests.find(c => c.id == appState.currentContestId);
-                if (!contest) {
-                    showMessage('Ошибка', 'Конкурс не найден');
-                    return;
-                }
-                
-                if (new Date(contest.end_date) < new Date()) {
-                    showMessage('Конкурс завершен', 'Конкурс уже завершен. Прием работ окончен.', () => {
-                        hideWorkModal();
-                    });
-                    return;
-                }
-                
-                if (new Date(contest.start_date) > new Date()) {
-                    showMessage('Конкурс не начался', `Конкурс еще не начался. Прием работ начнется ${formatDate(contest.start_date)}`, () => {
-                        hideWorkModal();
-                    });
-                    return;
-                }
-                
-                const maxParticipants = contest.max_participants || 0;
-                const currentParticipants = contest.participant_count || 0;
-                
-                if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
-                    showMessage('Места закончились', `Максимальное число участников (${maxParticipants}) уже достигнуто. Регистрация закрыта.`, () => {
-                        hideWorkModal();
-                    });
-                    return;
-                }
-                
-                const { data: existingWork } = await supabase
-                    .from('works')
-                    .select('*')
-                    .eq('contest_id', appState.currentContestId)
-                    .eq('user_id', userId)
-                    .single();
-                    
-                if (existingWork) {
-                    showMessage('Работа уже отправлена', 'Вы уже отправили работу на этот конкурс!', () => {
-                        hideWorkModal();
-                    });
-                    return;
-                }
-                
-                const { error } = await supabase
-                    .from('works')
-                    .insert({
-                        contest_id: appState.currentContestId,
-                        user_id: userId,
-                        work_url: workUrl,
-                        votes: 0
-                    });
-                    
-                if (error) {
-                    throw error;
-                }
-                
-                const newCount = currentParticipants + 1;
-                
-                await supabase
-                    .from('contests')
-                    .update({ participant_count: newCount })
-                    .eq('id', appState.currentContestId);
-                
-                showMessage('Успешно!', 'Ваша работа успешно отправлена на конкурс!', () => {
-                    hideWorkModal();
-                    
-                    contest.participant_count = newCount;
-                    
-                    showContestDetails(appState.currentContestId);
-                });
-                
-            } catch (error) {
-                console.error('Ошибка отправки работы:', error);
-                
-                let errorMessage = 'Ошибка при отправке работы. Попробуйте еще раз.';
-                let errorTitle = 'Ошибка';
-                
-                if (error.code === '23505') {
-                    errorMessage = 'Вы уже отправили работу на этот конкурс!';
-                    errorTitle = 'Дублирование работы';
-                } else if (error.code === '42501') {
-                    errorMessage = 'Ошибка доступа. Пожалуйста, попробуйте еще раз.';
-                    errorTitle = 'Ошибка доступа';
-                }
-                
-                showMessage(errorTitle, errorMessage, () => {
-                    hideWorkModal();
-                });
-            }
+        if (text.length > 1000) {
+            showMessage('Ошибка', 'Комментарий не должен превышать 1000 символов');
+            return;
         }
         
-        // Показать страницу добавления/редактирования конкурса (админ)
-        function showAdminContestPage() {
-            if (!appState.isAdmin) {
-                showAdminModal();
-                return;
-            }
-            
-            appState.currentContestId = null;
-            
-            document.getElementById('contest-name').value = '';
-            document.getElementById('short-description').value = '';
-            document.getElementById('full-description').value = '';
-            document.getElementById('contest-rules').value = '';
-            document.getElementById('start-date').value = '';
-            document.getElementById('end-date').value = '';
-            document.getElementById('max-participants').value = '0';
-            
-            document.getElementById('admin-contest-title').textContent = 'Добавить конкурс';
-            document.getElementById('delete-contest-btn').classList.add('hidden');
-            document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Сохранить конкурс';
-            
-            showPage('admin-contest');
-        }
-        
-        // Показать страницу редактирования конкурса
-        function showEditContestPage(contest) {
-            if (!appState.isAdmin) {
-                showMessage('Ошибка', 'У вас нет прав для редактирования конкурсов');
-                return;
-            }
-            
-            appState.currentContestId = contest.id;
-            
-            document.getElementById('contest-name').value = contest.name || '';
-            document.getElementById('short-description').value = contest.short_description || '';
-            document.getElementById('full-description').value = contest.full_description || '';
-            document.getElementById('contest-rules').value = contest.rules || '';
-            document.getElementById('start-date').value = contest.start_date.split('T')[0] || '';
-            document.getElementById('end-date').value = contest.end_date.split('T')[0] || '';
-            document.getElementById('max-participants').value = contest.max_participants || 0;
-            
-            document.getElementById('admin-contest-title').textContent = 'Редактировать конкурс';
-            document.getElementById('delete-contest-btn').classList.remove('hidden');
-            document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Обновить конкурс';
-            
-            showPage('admin-contest');
-        }
-        
-        // Сохранить/обновить конкурс
-        async function saveContest() {
-            if (!appState.isAdmin) {
-                showMessage('Ошибка', 'У вас нет прав для сохранения конкурсов');
-                return;
-            }
-            
-            const contestData = {
-                name: document.getElementById('contest-name').value.trim(),
-                short_description: document.getElementById('short-description').value.trim(),
-                full_description: document.getElementById('full-description').value.trim(),
-                rules: document.getElementById('contest-rules').value.trim(),
-                start_date: document.getElementById('start-date').value,
-                end_date: document.getElementById('end-date').value,
-                max_participants: parseInt(document.getElementById('max-participants').value) || 0
+        try {
+            const commentData = {
+                contest_id: appState.currentContestId,
+                user_id: userId,
+                username: fullUserName || 'Аноним',
+                comment_text: text
             };
             
-            if (!contestData.name || !contestData.start_date || !contestData.end_date) {
-                showMessage('Ошибка', 'Пожалуйста, заполните обязательные поля: название, дата начала и дата окончания');
-                return;
+            if (appState.currentReplyTo) {
+                commentData.parent_id = appState.currentReplyTo.id;
             }
             
-            if (new Date(contestData.end_date) <= new Date(contestData.start_date)) {
-                showMessage('Ошибка', 'Дата окончания должна быть позже даты начала');
-                return;
-            }
-            
-            try {
-                const isEditing = document.getElementById('admin-contest-title').textContent === 'Редактировать конкурс';
+            const { error } = await supabase
+                .from('comments')
+                .insert(commentData);
                 
-                if (isEditing && appState.currentContestId) {
-                    const { error } = await supabase
-                        .from('contests')
-                        .update(contestData)
-                        .eq('id', appState.currentContestId);
-                        
-                    if (error) {
-                        throw error;
-                    }
-                    
-                    showMessage('Успех', 'Конкурс успешно обновлен!', () => {
-                        appState.currentContestId = null;
-                        loadContests();
-                        showPage('home');
-                    });
-                } else {
-                    contestData.participant_count = 0;
-                    
-                    const { error } = await supabase
-                        .from('contests')
-                        .insert(contestData);
-                        
-                    if (error) {
-                        throw error;
-                    }
-                    
-                    showMessage('Успех', 'Конкурс успешно добавлен!', () => {
-                        appState.currentContestId = null;
-                        loadContests();
-                        showPage('home');
-                    });
+            if (error) {
+                throw error;
+            }
+            
+            hideCommentModal();
+            showMessage('Успех', appState.currentReplyTo ? 'Ответ успешно добавлен!' : 'Комментарий успешно добавлен!', () => {
+                loadComments();
+            });
+            
+        } catch (error) {
+            console.error('Ошибка добавления комментария:', error);
+            showMessage('Ошибка', 'Не удалось добавить комментарий. Попробуйте еще раз.');
+        }
+    }
+    
+    // Удаление комментария
+    async function deleteComment(commentId) {
+        showMessage('Подтверждение', 'Вы уверены, что хотите удалить этот комментарий? Все ответы также будут удалены.', async () => {
+            try {
+                const commentToDelete = appState.comments.find(c => c.id === commentId);
+                if (!commentToDelete) {
+                    showMessage('Ошибка', 'Комментарий не найден');
+                    return;
                 }
                 
-            } catch (error) {
-                console.error('Ошибка сохранения конкурса:', error);
-                showMessage('Ошибка', 'Ошибка при сохранении конкурса. Попробуйте еще раз.');
-            }
-        }
-        
-        // Удалить конкурс
-        async function deleteContest(contestId) {
-            if (!appState.isAdmin) {
-                showMessage('Ошибка', 'У вас нет прав для удаления конкурсов');
-                return;
-            }
-            
-            const idToDelete = contestId || appState.currentContestId;
-            if (!idToDelete) return;
-            
-            try {
-                await supabase
-                    .from('votes')
-                    .delete()
-                    .eq('contest_id', idToDelete);
+                const canDelete = appState.isAdmin || (commentToDelete.user_id && commentToDelete.user_id.toString() === userId.toString());
                 
-                await supabase
-                    .from('works')
-                    .delete()
-                    .eq('contest_id', idToDelete);
+                if (!canDelete) {
+                    showMessage('Ошибка', 'У вас нет прав для удаления этого комментария');
+                    return;
+                }
                 
-                await supabase
-                    .from('comments')
-                    .delete()
-                    .eq('contest_id', idToDelete);
+                const repliesIds = getCommentRepliesIds(commentId, appState.comments);
+                const allIdsToDelete = [commentId, ...repliesIds];
                 
                 const { error } = await supabase
-                    .from('contests')
+                    .from('comments')
                     .delete()
-                    .eq('id', idToDelete);
+                    .in('id', allIdsToDelete);
                     
                 if (error) {
                     throw error;
                 }
                 
-                showMessage('Успех', 'Конкурс успешно удален!', () => {
+                appState.comments = appState.comments.filter(c => !allIdsToDelete.includes(c.id));
+                
+                const commentTree = buildCommentTree(appState.comments);
+                renderComments(commentTree);
+                
+                showMessage('Успех', 'Комментарий успешно удален!');
+                
+            } catch (error) {
+                console.error('Ошибка удаления комментария:', error);
+                showMessage('Ошибка', 'Не удалось удалить комментарий. Попробуйте еще раз.');
+            }
+        });
+    }
+    
+    // Получение всех ID ответов на комментарий
+    function getCommentRepliesIds(commentId, allComments) {
+        const repliesIds = [];
+        
+        const directReplies = allComments.filter(c => c.parent_id === commentId);
+        
+        directReplies.forEach(reply => {
+            repliesIds.push(reply.id);
+            const nestedReplies = getCommentRepliesIds(reply.id, allComments);
+            repliesIds.push(...nestedReplies);
+        });
+        
+        return repliesIds;
+    }
+    
+    // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
+    
+    // Показать страницу голосования
+    async function showVotingPage(contestId) {
+        const contest = appState.contests.find(c => c.id == contestId);
+        if (!contest) return;
+        
+        appState.currentContestId = contestId;
+        const isEnded = new Date(contest.end_date) < new Date();
+        
+        try {
+            const { data: works, error } = await supabase
+                .from('works')
+                .select(`
+                    *,
+                    participant:participants(full_name, age, group)
+                `)
+                .eq('contest_id', contestId)
+                .order('votes', { ascending: false });
+                
+            if (error) {
+                throw error;
+            }
+            
+            let participantsHtml = '';
+            
+            if (!works || works.length === 0) {
+                participantsHtml = '<div class="alert alert-info">На данный момент нет участников в этом конкурсе.</div>';
+            } else {
+                participantsHtml = '<div class="participants-list">';
+                
+                const userVotes = await getUserVotes(contestId, userId);
+                
+                let place = 1;
+                works.forEach((work, index) => {
+                    let placeBadge = '';
+                    if (isEnded) {
+                        if (place === 1) placeBadge = '<span class="winner-badge">1 место</span>';
+                        else if (place === 2) placeBadge = '<span class="winner-badge">2 место</span>';
+                        else if (place === 3) placeBadge = '<span class="winner-badge">3 место</span>';
+                        
+                        if (index < works.length - 1 && works[index + 1].votes < work.votes) {
+                            place++;
+                        }
+                    }
+                    
+                    const participantInfo = work.participant || {};
+                    const hasVoted = userVotes.some(vote => vote.participant_id === work.user_id);
+                    const isCurrentUser = work.user_id === userId;
+                    
+                    participantsHtml += `
+                        <div class="participant-card ${place <= 3 && isEnded ? 'winner' : ''}">
+                            <div class="participant-info">
+                                <h4>${participantInfo.full_name || 'Участник'} ${placeBadge}</h4>
+                                <div class="participant-details">
+                                    <span>Возраст: ${participantInfo.age || 'Не указан'}</span>
+                                    <span>Группа: ${participantInfo.group || 'Не указана'}</span>
+                                </div>
+                                <p style="margin-top: 8px;">
+                                    <a href="${work.work_url}" target="_blank" style="color: var(--primary-red);">
+                                        <i class="fas fa-external-link-alt"></i> Посмотреть работу
+                                    </a>
+                                </p>
+                                <p style="margin-top: 5px; color: var(--primary-green); font-weight: 500;">
+                                    <i class="fas fa-heart"></i> Голосов: ${work.votes || 0}
+                                </p>
+                            </div>
+                            
+                            ${!isEnded && !hasVoted && !isCurrentUser ? `
+                                <button class="vote-button" data-participant-id="${work.user_id}">
+                                    <i class="fas fa-heart"></i> Отдать голос
+                                </button>
+                            ` : ''}
+                            
+                            ${hasVoted ? `
+                                <span style="color: var(--primary-green); font-weight: 500;">
+                                    <i class="fas fa-check-circle"></i> Вы проголосовали
+                                </span>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                participantsHtml += '</div>';
+            }
+            
+            votingContainer.innerHTML = `
+                <div class="contest-detail-card">
+                    <h2 style="color: var(--primary-green); margin-bottom: 15px;">Голосование: ${contest.name}</h2>
+                    <p style="margin-bottom: 20px; color: var(--dark-gray);">
+                        ${isEnded ? 'Конкурс завершен. Результаты:' : 'Отдайте свой голос за понравившуюся работу:'}
+                    </p>
+                    ${participantsHtml}
+                </div>
+            `;
+            
+            showPage('voting');
+            
+            if (!isEnded) {
+                document.querySelectorAll('.vote-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const participantId = this.getAttribute('data-participant-id');
+                        voteForParticipant(contestId, participantId);
+                    });
+                });
+            }
+            
+        } catch (error) {
+            console.error('Ошибка загрузки участников:', error);
+            votingContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить участников. Попробуйте позже.</div>';
+            showPage('voting');
+        }
+    }
+    
+    // Получить голоса пользователя для конкурса
+    async function getUserVotes(contestId, voterId) {
+        try {
+            const { data, error } = await supabase
+                .from('votes')
+                .select('*')
+                .eq('contest_id', contestId)
+                .eq('voter_id', voterId);
+                
+            if (error) {
+                throw error;
+            }
+            
+            return data || [];
+        } catch (error) {
+            console.error('Ошибка загрузки голосов:', error);
+            return [];
+        }
+    }
+    
+    // Голосование за участника
+    async function voteForParticipant(contestId, participantId) {
+        try {
+            const { data: existingVote } = await supabase
+                .from('votes')
+                .select('*')
+                .eq('contest_id', contestId)
+                .eq('participant_id', participantId)
+                .eq('voter_id', userId)
+                .single();
+                
+            if (existingVote) {
+                showMessage('Ошибка', 'Вы уже голосовали за этого участника!');
+                return;
+            }
+            
+            const { error: voteError } = await supabase
+                .from('votes')
+                .insert({
+                    contest_id: contestId,
+                    participant_id: participantId,
+                    voter_id: userId
+                });
+                
+            if (voteError) {
+                throw voteError;
+            }
+            
+            const { error: workError } = await supabase.rpc('increment_votes', {
+                work_contest_id: contestId,
+                work_user_id: participantId
+            });
+            
+            if (workError) {
+                throw workError;
+            }
+            
+            showMessage('Успех', 'Ваш голос учтен!', () => {
+                showVotingPage(contestId);
+            });
+            
+        } catch (error) {
+            console.error('Ошибка голосования:', error);
+            showMessage('Ошибка', 'Ошибка при голосовании. Попробуйте еще раз.');
+        }
+    }
+    
+    // Отправить работу на конкурс
+    async function submitWork() {
+        const workUrl = workLinkInput.value.trim();
+        
+        if (!workUrl) {
+            showMessage('Ошибка', 'Пожалуйста, введите ссылку на работу');
+            return;
+        }
+        
+        if (!appState.userProfile || !appState.userProfile.full_name) {
+            showMessage('Заполните профиль', 'Для участия в конкурсе необходимо заполнить профиль!', () => {
+                hideWorkModal();
+                showPage('profile');
+            });
+            return;
+        }
+        
+        try {
+            const contest = appState.contests.find(c => c.id == appState.currentContestId);
+            if (!contest) {
+                showMessage('Ошибка', 'Конкурс не найден');
+                return;
+            }
+            
+            if (new Date(contest.end_date) < new Date()) {
+                showMessage('Конкурс завершен', 'Конкурс уже завершен. Прием работ окончен.', () => {
+                    hideWorkModal();
+                });
+                return;
+            }
+            
+            if (new Date(contest.start_date) > new Date()) {
+                showMessage('Конкурс не начался', `Конкурс еще не начался. Прием работ начнется ${formatDate(contest.start_date)}`, () => {
+                    hideWorkModal();
+                });
+                return;
+            }
+            
+            const maxParticipants = contest.max_participants || 0;
+            const currentParticipants = contest.participant_count || 0;
+            
+            if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
+                showMessage('Места закончились', `Максимальное число участников (${maxParticipants}) уже достигнуто. Регистрация закрыта.`, () => {
+                    hideWorkModal();
+                });
+                return;
+            }
+            
+            const { data: existingWork } = await supabase
+                .from('works')
+                .select('*')
+                .eq('contest_id', appState.currentContestId)
+                .eq('user_id', userId)
+                .single();
+                
+            if (existingWork) {
+                showMessage('Работа уже отправлена', 'Вы уже отправили работу на этот конкурс!', () => {
+                    hideWorkModal();
+                });
+                return;
+            }
+            
+            const { error } = await supabase
+                .from('works')
+                .insert({
+                    contest_id: appState.currentContestId,
+                    user_id: userId,
+                    work_url: workUrl,
+                    votes: 0
+                });
+                
+            if (error) {
+                throw error;
+            }
+            
+            const newCount = currentParticipants + 1;
+            
+            await supabase
+                .from('contests')
+                .update({ participant_count: newCount })
+                .eq('id', appState.currentContestId);
+            
+            showMessage('Успешно!', 'Ваша работа успешно отправлена на конкурс!', () => {
+                hideWorkModal();
+                
+                contest.participant_count = newCount;
+                
+                showContestDetails(appState.currentContestId);
+            });
+            
+        } catch (error) {
+            console.error('Ошибка отправки работы:', error);
+            
+            let errorMessage = 'Ошибка при отправке работы. Попробуйте еще раз.';
+            let errorTitle = 'Ошибка';
+            
+            if (error.code === '23505') {
+                errorMessage = 'Вы уже отправили работу на этот конкурс!';
+                errorTitle = 'Дублирование работы';
+            } else if (error.code === '42501') {
+                errorMessage = 'Ошибка доступа. Пожалуйста, попробуйте еще раз.';
+                errorTitle = 'Ошибка доступа';
+            }
+            
+            showMessage(errorTitle, errorMessage, () => {
+                hideWorkModal();
+            });
+        }
+    }
+    
+    // Показать страницу добавления/редактирования конкурса (админ)
+    function showAdminContestPage() {
+        if (!appState.isAdmin) {
+            showAdminModal();
+            return;
+        }
+        
+        appState.currentContestId = null;
+        
+        document.getElementById('contest-name').value = '';
+        document.getElementById('short-description').value = '';
+        document.getElementById('full-description').value = '';
+        document.getElementById('contest-rules').value = '';
+        document.getElementById('start-date').value = '';
+        document.getElementById('end-date').value = '';
+        document.getElementById('max-participants').value = '0';
+        
+        document.getElementById('admin-contest-title').textContent = 'Добавить конкурс';
+        document.getElementById('delete-contest-btn').classList.add('hidden');
+        document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Сохранить конкурс';
+        
+        showPage('admin-contest');
+    }
+    
+    // Показать страницу редактирования конкурса
+    function showEditContestPage(contest) {
+        if (!appState.isAdmin) {
+            showMessage('Ошибка', 'У вас нет прав для редактирования конкурсов');
+            return;
+        }
+        
+        appState.currentContestId = contest.id;
+        
+        document.getElementById('contest-name').value = contest.name || '';
+        document.getElementById('short-description').value = contest.short_description || '';
+        document.getElementById('full-description').value = contest.full_description || '';
+        document.getElementById('contest-rules').value = contest.rules || '';
+        document.getElementById('start-date').value = contest.start_date.split('T')[0] || '';
+        document.getElementById('end-date').value = contest.end_date.split('T')[0] || '';
+        document.getElementById('max-participants').value = contest.max_participants || 0;
+        
+        document.getElementById('admin-contest-title').textContent = 'Редактировать конкурс';
+        document.getElementById('delete-contest-btn').classList.remove('hidden');
+        document.getElementById('save-contest-btn').innerHTML = '<i class="fas fa-save"></i> Обновить конкурс';
+        
+        showPage('admin-contest');
+    }
+    
+    // Сохранить/обновить конкурс
+    async function saveContest() {
+        if (!appState.isAdmin) {
+            showMessage('Ошибка', 'У вас нет прав для сохранения конкурсов');
+            return;
+        }
+        
+        const contestData = {
+            name: document.getElementById('contest-name').value.trim(),
+            short_description: document.getElementById('short-description').value.trim(),
+            full_description: document.getElementById('full-description').value.trim(),
+            rules: document.getElementById('contest-rules').value.trim(),
+            start_date: document.getElementById('start-date').value,
+            end_date: document.getElementById('end-date').value,
+            max_participants: parseInt(document.getElementById('max-participants').value) || 0
+        };
+        
+        if (!contestData.name || !contestData.start_date || !contestData.end_date) {
+            showMessage('Ошибка', 'Пожалуйста, заполните обязательные поля: название, дата начала и дата окончания');
+            return;
+        }
+        
+        if (new Date(contestData.end_date) <= new Date(contestData.start_date)) {
+            showMessage('Ошибка', 'Дата окончания должна быть позже даты начала');
+            return;
+        }
+        
+        try {
+            const isEditing = document.getElementById('admin-contest-title').textContent === 'Редактировать конкурс';
+            
+            if (isEditing && appState.currentContestId) {
+                const { error } = await supabase
+                    .from('contests')
+                    .update(contestData)
+                    .eq('id', appState.currentContestId);
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('Успех', 'Конкурс успешно обновлен!', () => {
                     appState.currentContestId = null;
                     loadContests();
                     showPage('home');
                 });
+            } else {
+                contestData.participant_count = 0;
                 
-            } catch (error) {
-                console.error('Ошибка удаления конкурса:', error);
-                showMessage('Ошибка', 'Ошибка при удалении конкурса. Попробуйте еще раз.');
+                const { error } = await supabase
+                    .from('contests')
+                    .insert(contestData);
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('Успех', 'Конкурс успешно добавлен!', () => {
+                    appState.currentContestId = null;
+                    loadContests();
+                    showPage('home');
+                });
             }
+            
+        } catch (error) {
+            console.error('Ошибка сохранения конкурса:', error);
+            showMessage('Ошибка', 'Ошибка при сохранении конкурса. Попробуйте еще раз.');
+        }
+    }
+    
+    // Удалить конкурс
+    async function deleteContest(contestId) {
+        if (!appState.isAdmin) {
+            showMessage('Ошибка', 'У вас нет прав для удаления конкурсов');
+            return;
         }
         
-        // Вспомогательные функции
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
+        const idToDelete = contestId || appState.currentContestId;
+        if (!idToDelete) return;
+        
+        try {
+            await supabase
+                .from('votes')
+                .delete()
+                .eq('contest_id', idToDelete);
+            
+            await supabase
+                .from('works')
+                .delete()
+                .eq('contest_id', idToDelete);
+            
+            await supabase
+                .from('comments')
+                .delete()
+                .eq('contest_id', idToDelete);
+            
+            const { error } = await supabase
+                .from('contests')
+                .delete()
+                .eq('id', idToDelete);
+                
+            if (error) {
+                throw error;
+            }
+            
+            showMessage('Успех', 'Конкурс успешно удален!', () => {
+                appState.currentContestId = null;
+                loadContests();
+                showPage('home');
             });
-        }
-        
-        function getTimeAgo(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffSec = Math.floor(diffMs / 1000);
-            const diffMin = Math.floor(diffSec / 60);
-            const diffHour = Math.floor(diffMin / 60);
-            const diffDay = Math.floor(diffHour / 24);
             
-            if (diffSec < 60) return 'только что';
-            if (diffMin < 60) return `${diffMin} мин. назад`;
-            if (diffHour < 24) return `${diffHour} ч. назад`;
-            if (diffDay < 7) return `${diffDay} дн. назад`;
-            
-            return formatDate(dateString);
+        } catch (error) {
+            console.error('Ошибка удаления конкурса:', error);
+            showMessage('Ошибка', 'Ошибка при удалении конкурса. Попробуйте еще раз.');
         }
+    }
+    
+    // Вспомогательные функции
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
+    
+    function getTimeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
         
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        if (diffSec < 60) return 'только что';
+        if (diffMin < 60) return `${diffMin} мин. назад`;
+        if (diffHour < 24) return `${diffHour} ч. назад`;
+        if (diffDay < 7) return `${diffDay} дн. назад`;
+        
+        return formatDate(dateString);
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Добавляем анимацию fadeOut
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
         }
-        
-        // Добавляем анимацию fadeOut
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeOut {
-                from { opacity: 1; transform: translateY(0); }
-                to { opacity: 0; transform: translateY(10px); }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
+    `;
+    document.head.appendChild(style);
+</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
