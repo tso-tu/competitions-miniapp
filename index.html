@@ -1662,27 +1662,7 @@ h1 {
         contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
     }
 }
-        /*async function loadContests() {
-            contestListContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Загрузка конкурсов...</p></div>';
-            
-            try {
-                const { data, error } = await supabase
-                    .from('contests')
-                    .select('*')
-                    .order('start_date', { ascending: false });
-                    
-                if (error) {
-                    throw error;
-                }
-                
-                appState.contests = data || [];
-                renderContestList();
-            } catch (error) {
-                console.error('Ошибка загрузки конкурсов:', error);
-                contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
-            }
-        }*/
-        
+    
         // Отображение списка конкурсов
         function renderContestList() {
             if (!appState.contests.length) {
@@ -2896,4 +2876,5 @@ h1 {
     </script>
 </body>
 </html>
+
 
