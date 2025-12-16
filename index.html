@@ -1206,10 +1206,10 @@
         // Инициализация Supabase
         const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc';
-        let supabase;
+       // let supabase;
         
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             console.log('Supabase инициализирован');
         } catch (error) {
             console.error('Ошибка инициализации Supabase:', error);
@@ -2964,3 +2964,4 @@
     </script>
 </body>
 </html>
+
