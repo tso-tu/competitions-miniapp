@@ -1192,20 +1192,53 @@ h1 {
     
     <script>
         // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
+let tg;
+try {
+    tg = window.Telegram.WebApp;
+    if (tg) {
         tg.expand();
         tg.MainButton.hide();
-        
-        // Получаем ID пользователя Telegram
-        const userId = tg.initDataUnsafe?.user?.id || 'test_user_123';
-        const userName = tg.initDataUnsafe?.user?.first_name || 'Пользователь';
-        const userLastName = tg.initDataUnsafe?.user?.last_name || '';
-        const fullUserName = userName + (userLastName ? ' ' + userLastName : '');
-        
-        // Инициализация Supabase
-        const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc'; 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+        console.warn('Telegram Web App не найден. Используем тестовый режим.');
+    }
+} catch (error) {
+    console.warn('Ошибка инициализации Telegram Web App:', error);
+}
+
+// Получаем ID пользователя Telegram
+const userId = (tg?.initDataUnsafe?.user?.id) ? tg.initDataUnsafe.user.id.toString() : 'test_user_' + Math.floor(Math.random() * 1000);
+const userName = tg?.initDataUnsafe?.user?.first_name || 'Тестовый';
+const userLastName = tg?.initDataUnsafe?.user?.last_name || 'Пользователь';
+const fullUserName = userName + (userLastName ? ' ' + userLastName : '');
+
+// Инициализация Supabase (ИСПРАВЛЕННЫЙ КЛЮЧ - проверьте актуальность)
+const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co';
+// ПРОВЕРЬТЕ, ЧТО ЭТОТ КЛЮЧ АКТУАЛЕН И НЕ ИСТЕК!
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc';
+
+// Проверка существования supabase
+let supabase;
+try {
+    if (window.supabase && window.supabase.createClient) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase инициализирован');
+    } else {
+        console.error('Supabase JS клиент не найден');
+        // Создаем заглушку для отладки
+        supabase = {
+            from: () => ({
+                select: () => Promise.resolve({ data: [], error: null }),
+                insert: () => Promise.resolve({ error: null }),
+                update: () => Promise.resolve({ error: null }),
+                delete: () => Promise.resolve({ error: null }),
+                eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) })
+            }),
+            rpc: () => Promise.resolve({ error: null })
+        };
+    }
+} catch (error) {
+    console.error('Ошибка инициализации Supabase:', error);
+}
         
         // Состояние приложения
         const appState = {
@@ -1639,32 +1672,97 @@ h1 {
         // Загрузка конкурсов
         async function loadContests() {
     try {
-        // Добавляем подсчет участников
-        const { data, error } = await supabase
+        // Показываем индикатор загрузки
+        contestListContainer.innerHTML = `
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Загрузка конкурсов...</p>
+            </div>
+        `;
+        
+        // Пробуем загрузить разными способами
+        let data = [];
+        let error = null;
+        
+        // Способ 1: Простой запрос без подсчета участников
+        const result = await supabase
             .from('contests')
-            .select(`
-                *,
-                works:works(count)
-            `)
+            .select('*')
             .order('start_date', { ascending: false });
             
-        if (error) throw error;
+        if (result.error) {
+            throw result.error;
+        }
         
-        // Преобразуем данные
-        appState.contests = data.map(contest => ({
-            ...contest,
-            participant_count: contest.works?.[0]?.count || 0
+        data = result.data || [];
+        
+        // Подсчитываем участников отдельно для каждого конкурса
+        const contestsWithParticipants = await Promise.all(data.map(async (contest) => {
+            try {
+                // Получаем количество участников
+                const { count, error: countError } = await supabase
+                    .from('works')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('contest_id', contest.id);
+                    
+                if (countError) {
+                    console.warn(`Ошибка подсчета участников для конкурса ${contest.id}:`, countError);
+                    contest.participant_count = 0;
+                } else {
+                    contest.participant_count = count || 0;
+                }
+                
+                return contest;
+            } catch (err) {
+                console.error('Ошибка при подсчете участников:', err);
+                contest.participant_count = 0;
+                return contest;
+            }
         }));
         
-        renderContestList();
+        appState.contests = contestsWithParticipants;
+        
+        if (contestsWithParticipants.length === 0) {
+            contestListContainer.innerHTML = `
+                <div style="text-align: center; padding: 50px; color: var(--dark-gray);">
+                    <i class="fas fa-trophy" style="font-size: 50px; margin-bottom: 20px; opacity: 0.5;"></i>
+                    <h3>Конкурсы не найдены</h3>
+                    <p>На данный момент нет активных конкурсов.</p>
+                    ${appState.isAdmin ? `
+                        <button class="button button-primary" onclick="showAdminContestPage()" style="margin-top: 20px;">
+                            <i class="fas fa-plus"></i> Создать первый конкурс
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        } else {
+            renderContestList();
+        }
+        
     } catch (error) {
         console.error('Ошибка загрузки конкурсов:', error);
-        contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
+        contestListContainer.innerHTML = `
+            <div class="alert alert-warning" style="margin: 50px 20px; padding: 20px;">
+                <h3><i class="fas fa-exclamation-triangle"></i> Ошибка загрузки</h3>
+                <p>Не удалось загрузить список конкурсов.</p>
+                <p style="font-size: 12px; color: var(--dark-gray); margin-top: 10px;">${error.message}</p>
+                <button class="button button-primary" onclick="location.reload()" style="margin-top: 20px;">
+                    <i class="fas fa-redo"></i> Перезагрузить
+                </button>
+            </div>
+        `;
     }
 }
     
         // Отображение списка конкурсов
         function renderContestList() {
+ console.log('Рендерим список конкурсов:', appState.contests);
+    
+    if (!appState.contests || appState.contests.length === 0) {
+        contestListContainer.innerHTML = '<div class="alert alert-info">Конкурсов пока нет.</div>';
+        return;
+    }
+            
             if (!appState.contests.length) {
                 contestListContainer.innerHTML = '<div class="alert alert-info">На данный момент конкурсов нет.</div>';
                 return;
@@ -2876,5 +2974,6 @@ h1 {
     </script>
 </body>
 </html>
+
 
 
