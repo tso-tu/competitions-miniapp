@@ -1209,7 +1209,7 @@
        // let supabase;
         
         try {
-            var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             console.log('Supabase инициализирован');
         } catch (error) {
             console.error('Ошибка инициализации Supabase:', error);
@@ -2964,4 +2964,5 @@
     </script>
 </body>
 </html>
+
 
