@@ -1638,6 +1638,31 @@ h1 {
         
         // Загрузка конкурсов
         async function loadContests() {
+    try {
+        // Добавляем подсчет участников
+        const { data, error } = await supabase
+            .from('contests')
+            .select(`
+                *,
+                works:works(count)
+            `)
+            .order('start_date', { ascending: false });
+            
+        if (error) throw error;
+        
+        // Преобразуем данные
+        appState.contests = data.map(contest => ({
+            ...contest,
+            participant_count: contest.works?.[0]?.count || 0
+        }));
+        
+        renderContestList();
+    } catch (error) {
+        console.error('Ошибка загрузки конкурсов:', error);
+        contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
+    }
+}
+        /*async function loadContests() {
             contestListContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Загрузка конкурсов...</p></div>';
             
             try {
@@ -1656,7 +1681,7 @@ h1 {
                 console.error('Ошибка загрузки конкурсов:', error);
                 contestListContainer.innerHTML = '<div class="alert alert-warning">Не удалось загрузить конкурсы. Попробуйте позже.</div>';
             }
-        }
+        }*/
         
         // Отображение списка конкурсов
         function renderContestList() {
@@ -2060,6 +2085,25 @@ h1 {
             
             // Добавляем обработчики для кнопок комментариев
             setTimeout(() => {
+    // Кнопки "Ответить" теперь есть только на комментариях без parent_id
+    document.querySelectorAll('.reply-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
+            const comment = appState.comments.find(c => c.id === commentId);
+            if (comment) {
+                showCommentModal(true, comment);
+            }
+        });
+    });
+    
+    document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
+            deleteComment(commentId);
+        });
+    });
+}, 100);
+            /*setTimeout(() => {
                 document.querySelectorAll('.reply-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const commentId = parseInt(this.closest('.comment-card').dataset.commentId);
@@ -2076,11 +2120,60 @@ h1 {
                         deleteComment(commentId);
                     });
                 });
-            }, 100);
+            }, 100);*/
         }
         
         // Рендеринг комментария с рекурсивными ответами
+
         function renderCommentWithReplies(comment, level) {
+    const isReply = level > 0;
+    
+    const canDelete = appState.isAdmin || (comment.user_id && comment.user_id.toString() === userId.toString());
+    const timeAgo = getTimeAgo(comment.created_at);
+    
+    let html = `
+        <div class="comment-card ${isReply ? 'reply' : ''}" data-comment-id="${comment.id}">
+            <div class="comment-header">
+                <div class="comment-user">
+                    <div class="comment-avatar">
+                        ${comment.username ? comment.username.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div class="comment-user-info">
+                        <div class="comment-username">${comment.username || 'Аноним'}</div>
+                        <div class="comment-time">${timeAgo}</div>
+                    </div>
+                </div>
+                ${canDelete ? `
+                    <button class="comment-action-btn delete-btn delete-comment-btn" title="Удалить комментарий">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                ` : ''}
+            </div>
+            <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
+    `;
+    
+    // ВАЖНОЕ ИЗМЕНЕНИЕ: Показываем кнопку "Ответить" только на комментариях ПЕРВОГО уровня
+    if (!isReply) {
+        html += `
+            <div class="comment-actions">
+                <button class="comment-action-btn reply-btn">
+                    <i class="fas fa-reply"></i> Ответить
+                </button>
+            </div>
+        `;
+    }
+    
+    if (comment.replies && comment.replies.length > 0) {
+        comment.replies.forEach(reply => {
+            html += renderCommentWithReplies(reply, level + 1);
+        });
+    }
+    
+    html += '</div>';
+    return html;
+}
+        
+        /*function renderCommentWithReplies(comment, level) {
             const isReply = level > 0;
             
             // ВАЖНОЕ ИСПРАВЛЕНИЕ: Проверяем, может ли пользователь удалить комментарий
@@ -2129,7 +2222,7 @@ h1 {
             
             html += '</div>';
             return html;
-        }
+        }*/
         
         // Отправка комментария
         async function submitComment() {
@@ -2743,6 +2836,7 @@ h1 {
     </script>
 </body>
 </html>
+
 
 
 
