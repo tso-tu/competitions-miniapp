@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Конкурсы ArtSpace</title>
+    <title>Конкурсы TOP</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1152,7 +1152,7 @@ h1 {
             <div class="link-input">
                 <input type="text" id="work-link" placeholder="Введите ссылку на вашу работу">
                 <button class="button button-primary" id="submit-work-link">
-                    <i class="fas fa-paper-plane"></i> Отправить
+                    <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>
@@ -1181,7 +1181,7 @@ h1 {
             </div>
             <div class="form-actions">
                 <button class="button button-primary" id="submit-comment-btn">
-                    <i class="fas fa-paper-plane"></i> Отправить
+                    <i class="fas fa-paper-plane"></i>
                 </button>
                 <button class="button button-secondary" id="cancel-comment-btn">
                     <i class="fas fa-times"></i> Отмена
@@ -1534,7 +1534,7 @@ h1 {
             
             if (appState.isAdmin) {
                 adminBtn.style.display = 'block';
-                adminBtn.innerHTML = '<i class="fas fa-user-cog"></i> Админ';
+                adminBtn.innerHTML = '<i class="fas fa-plus-circle"></i>';
                 adminMenuItem.innerHTML = '<i class="fas fa-user-cog"></i> Админ-панель';
                 if (addContestMenuItem) {
                     addContestMenuItem.style.display = 'flex';
@@ -1777,7 +1777,6 @@ h1 {
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: var(--dark-gray);">
                             <span>0</span>
-                            <span>${percentage}% заполнено</span>
                             <span>${contest.max_participants}</span>
                         </div>
                     </div>
@@ -2021,7 +2020,7 @@ h1 {
                             <i class="far fa-comments"></i> Комментарии (0)
                         </h3>
                         <button class="add-comment-btn" id="add-comment-btn">
-                            <i class="fas fa-plus"></i> Добавить комментарий
+                            <i class="fas fa-plus"></i>
                         </button>
                     </div>
                     <div class="no-comments">
@@ -2746,4 +2745,5 @@ h1 {
     </script>
 </body>
 </html>
+
 
