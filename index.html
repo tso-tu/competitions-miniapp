@@ -835,40 +835,37 @@
         }
 
         .comment-text {
-    color: var(--black);
-    line-height: 1.7;
-    margin-bottom: 15px;
-    padding: 15px;
-    background-color: #fcf9f5;
-    border-radius: 8px;
-    border: 1px solid var(--accent-taupe);
-    /* Добавляем перенос текста */
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-    max-width: 100%;
-    overflow: hidden;
-}
+			color: var(--black);
+			line-height: 1.7;
+			margin-bottom: 15px;
+			padding: 15px;
+			background-color: #fcf9f5;
+			border-radius: 8px;
+			border: 1px solid var(--accent-taupe);
+			word-wrap: break-word;
+			word-break: break-word;
+			overflow-wrap: break-word;
+			white-space: pre-wrap;
+			max-width: 100%;
+			overflow: hidden;
+		}
 
-/* Также добавьте для reply-textarea */
-.reply-textarea {
-    width: 100%;
-    padding: 15px;
-    border: 2px solid var(--accent-taupe);
-    border-radius: 10px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 14px;
-    resize: vertical;
-    min-height: 100px;
-    background-color: #fcf9f5;
-    transition: all 0.3s ease;
-    /* Добавляем перенос текста */
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-}
+		.reply-textarea {
+			width: 100%;
+			padding: 15px;
+			border: 2px solid var(--accent-taupe);
+			border-radius: 10px;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			font-size: 14px;
+			resize: vertical;
+			min-height: 100px;
+			background-color: #fcf9f5;
+			transition: all 0.3s ease;
+			word-wrap: break-word;
+			word-break: break-word;
+			overflow-wrap: break-word;
+			white-space: pre-wrap;
+		}
 
         .comment-actions {
             display: flex;
@@ -1016,7 +1013,7 @@
             </div>
             
             <div id="contest-list-container">
-                <!-- Список конкурсов будет здесь -->
+                <!-- Список конкурсов -->
             </div>
         </div>
         
@@ -1027,7 +1024,7 @@
             </button>
             
             <div id="contest-detail-container">
-                <!-- Детали конкурса будут здесь -->
+                <!-- Детали конкурса -->
             </div>
         </div>
         
@@ -1038,7 +1035,7 @@
             </button>
             
             <div id="voting-container">
-                <!-- Участники для голосования будут здесь -->
+                <!-- Участники для голосования -->
             </div>
         </div>
         
@@ -1215,7 +1212,7 @@
             tg.MainButton.hide();
         }
         
-        // Получаем ID пользователя Telegram
+        // Получаем данные пользователя Telegram
         const userId = (tg && tg.initDataUnsafe?.user?.id) ? tg.initDataUnsafe.user.id.toString() : 'test_user_' + Math.floor(Math.random() * 1000);
         const userName = (tg && tg.initDataUnsafe?.user?.first_name) ? tg.initDataUnsafe.user.first_name : 'Пользователь';
         const userLastName = (tg && tg.initDataUnsafe?.user?.last_name) ? tg.initDataUnsafe.user.last_name : '';
@@ -1224,7 +1221,6 @@
         // Инициализация Supabase
         const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc';
-       // let supabase;
         
         try {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1386,7 +1382,7 @@
                 deleteContestBtn.addEventListener('click', deleteContest);
             }
             
-            // Модальное окно для работы
+            // Модальное окно для загрузки работы
             const submitWorkLink = document.getElementById('submit-work-link');
             if (submitWorkLink) {
                 submitWorkLink.addEventListener('click', submitWork);
@@ -1654,8 +1650,7 @@
                     adminBtn.textContent = 'Выход';
 
                     adminBtn.removeEventListener('click', showAdminModal);
-            
-                    // Добавляем новый обработчик для выхода
+
                     adminBtn.addEventListener('click', logoutAdmin);
                 }
                 if (adminMenuItem) {
@@ -1669,8 +1664,6 @@
                     adminBtn.style.display = 'none';
 
                     adminBtn.removeEventListener('click', logoutAdmin);
-            
-                    // Добавляем обработчик для входа
                     adminBtn.addEventListener('click', showAdminModal);
                 }
                 if (adminMenuItem) {
@@ -1686,16 +1679,13 @@
         function logoutAdmin() {
             appState.isAdmin = false;
     
-            // Очищаем поле пароля
             const adminPasswordInput = document.getElementById('admin-password');
             if (adminPasswordInput) {
                 adminPasswordInput.value = '';
             }
-    
-            // Обновляем интерфейс
+  
             checkAdminStatus();
-    
-            // Показываем сообщение об успешном выходе
+ 
             showMessage('Выход выполнен', 'Вы вышли из режима администратора', () => {
                 showPage('home');
             });
@@ -1712,7 +1702,6 @@
             }
             
             try {
-                // Используем более простой метод хэширования для совместимости
                 const hashPassword = async (str) => {
                     const encoder = new TextEncoder();
                     const data = encoder.encode(str);
@@ -2011,7 +2000,7 @@
                     
                 userWork = data;
             } catch (error) {
-                // Работа не найдена
+			
             }
             
             let buttonsHtml = '';
@@ -2161,8 +2150,6 @@
             }
         }
         
-        // ========== СИСТЕМА КОММЕНТАРИЕВ ==========
-        
         // Загрузка комментариев
         async function loadComments() {
             try {
@@ -2264,7 +2251,6 @@
             
             commentsSection.innerHTML = commentsHtml;
             
-            // Добавляем обработчики событий для новой кнопки добавления комментария
             const addCommentBtn = document.getElementById('add-comment-btn');
             if (addCommentBtn) {
                 addCommentBtn.addEventListener('click', () => {
@@ -2293,7 +2279,6 @@
             }, 100);
         }
         
-        // Рендеринг комментария с рекурсивными ответами
         function renderCommentWithReplies(comment, level) {
             const isReply = level > 0;
             
@@ -2453,8 +2438,6 @@
             
             return repliesIds;
         }
-        
-        // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
         
         // Показать страницу голосования
         async function showVotingPage(contestId) {
@@ -2633,7 +2616,6 @@
                 });
                 
                 if (workError) {
-                    // Если RPC не работает, используем обновление напрямую
                     const { error: updateError } = await supabase
                         .from('works')
                         .update({ votes: supabase.sql`votes + 1` })
@@ -3010,5 +2992,3 @@
     </script>
 </body>
 </html>
-
-
