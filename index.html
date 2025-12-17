@@ -1652,6 +1652,11 @@
                 if (adminBtn) {
                     adminBtn.style.display = 'block';
                     adminBtn.textContent = 'Выход';
+
+                    adminBtn.removeEventListener('click', showAdminModal);
+            
+                    // Добавляем новый обработчик для выхода
+                    adminBtn.addEventListener('click', logoutAdmin);
                 }
                 if (adminMenuItem) {
                     adminMenuItem.innerHTML = '<i class="fas fa-user-cog"></i> Админ-панель';
@@ -1662,6 +1667,11 @@
             } else {
                 if (adminBtn) {
                     adminBtn.style.display = 'none';
+
+                    adminBtn.removeEventListener('click', logoutAdmin);
+            
+                    // Добавляем обработчик для входа
+                    adminBtn.addEventListener('click', showAdminModal);
                 }
                 if (adminMenuItem) {
                     adminMenuItem.innerHTML = '<i class="fas fa-lock"></i> Админ-панель';
@@ -1670,6 +1680,25 @@
                     addContestMenuItem.style.display = 'none';
                 }
             }
+        }
+
+        // Функция выхода из режима администратора
+        function logoutAdmin() {
+            appState.isAdmin = false;
+    
+            // Очищаем поле пароля
+            const adminPasswordInput = document.getElementById('admin-password');
+            if (adminPasswordInput) {
+                adminPasswordInput.value = '';
+            }
+    
+            // Обновляем интерфейс
+            checkAdminStatus();
+    
+            // Показываем сообщение об успешном выходе
+            showMessage('Выход выполнен', 'Вы вышли из режима администратора', () => {
+                showPage('home');
+            });
         }
         
         // Проверка пароля администратора
@@ -2981,3 +3010,4 @@
     </script>
 </body>
 </html>
+
