@@ -1224,7 +1224,8 @@
         // Инициализация Supabase
         const SUPABASE_URL = 'https://qjgpunbldddmithdlmcy.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ3B1bmJsZGRkbWl0aGRsbWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjE3MjcsImV4cCI6MjA4MTMzNzcyN30.qpzc8_E5JSkxDzWyURt8y76HmL4ErheBpoAu6EXySvc';
-       // let supabase;
+        
+        let supabase;
         
         try {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1232,6 +1233,11 @@
         } catch (error) {
             console.error('Ошибка инициализации Supabase:', error);
         }
+        
+        // Константы для безопасности
+        const ADMIN_SESSION_KEY = 'admin_session_token';
+        const ADMIN_SALT = 'contest_app_salt_2024';
+        const SESSION_EXPIRY_HOURS = 4;
         
         // Состояние приложения
         const appState = {
@@ -1243,9 +1249,6 @@
             comments: [],
             currentReplyTo: null
         };
-        
-        // Хэш пароля администратора (пароль: admin123)
-        const ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
         
         // Элементы DOM
         const homePage = document.getElementById('home-page');
@@ -1267,9 +1270,270 @@
         const commentModalTitle = document.getElementById('comment-modal-title');
         const replyToInfo = document.getElementById('reply-to-info');
         
-        // Инициализация приложения
+        // ========== ФУНКЦИИ БЕЗОПАСНОСТИ ==========
+        
+        // Хэширование пароля с солью
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + ADMIN_SALT);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        // Создание сессионного токена
+        function createSessionToken() {
+            const tokenData = {
+                userId: userId,
+                timestamp: Date.now(),
+                expiry: Date.now() + (SESSION_EXPIRY_HOURS * 60 * 60 * 1000)
+            };
+            return btoa(JSON.stringify(tokenData));
+        }
+        
+        // Проверка сессионного токена
+        function validateSessionToken(token) {
+            try {
+                const tokenData = JSON.parse(atob(token));
+                
+                // Проверяем срок действия
+                if (Date.now() > tokenData.expiry) {
+                    localStorage.removeItem(ADMIN_SESSION_KEY);
+                    return false;
+                }
+                
+                // Проверяем пользователя
+                if (tokenData.userId !== userId) {
+                    localStorage.removeItem(ADMIN_SESSION_KEY);
+                    return false;
+                }
+                
+                // Проверяем в базе данных, есть ли у пользователя права администратора
+                return checkAdminInDatabase();
+                
+            } catch (error) {
+                console.error('Ошибка проверки токена:', error);
+                localStorage.removeItem(ADMIN_SESSION_KEY);
+                return false;
+            }
+        }
+        
+        // Проверка администратора в базе данных
+        async function checkAdminInDatabase() {
+            try {
+                if (!supabase) return false;
+                
+                // Создаем таблицу админов, если её нет
+                await createAdminsTableIfNotExists();
+                
+                // Проверяем, есть ли пользователь в таблице админов
+                const { data, error } = await supabase
+                    .from('admins')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .single();
+                    
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Ошибка проверки админа:', error);
+                    return false;
+                }
+                
+                return !!data;
+                
+            } catch (error) {
+                console.error('Ошибка проверки админа:', error);
+                return false;
+            }
+        }
+        
+        // Создание таблицы админов
+        async function createAdminsTableIfNotExists() {
+            try {
+                // Проверяем существование таблицы
+                const { error } = await supabase
+                    .from('admins')
+                    .select('*')
+                    .limit(1);
+                    
+                if (error && error.message.includes('does not exist')) {
+                    // Таблицы нет, показываем сообщение
+                    console.log('Таблица админов не существует. Для первого входа используйте пароль: admin123');
+                }
+            } catch (error) {
+                console.error('Ошибка проверки таблицы админов:', error);
+            }
+        }
+        
+        // Проверка пароля администратора и добавление в базу
+        async function verifyAdminPassword(password) {
+            try {
+                // Хэшируем пароль
+                const hashedPassword = await hashPassword(password);
+                
+                // Проверяем пароль (здесь можно добавить несколько администраторов)
+                const validPasswords = [
+                    '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' // admin123
+                ];
+                
+                if (validPasswords.includes(hashedPassword)) {
+                    // Добавляем пользователя в таблицу админов
+                    await addUserToAdmins();
+                    return true;
+                }
+                
+                return false;
+                
+            } catch (error) {
+                console.error('Ошибка проверки пароля:', error);
+                return false;
+            }
+        }
+        
+        // Добавление пользователя в таблицу админов
+        async function addUserToAdmins() {
+            try {
+                if (!supabase) return false;
+                
+                const adminData = {
+                    user_id: userId,
+                    username: fullUserName || 'Администратор',
+                    telegram_id: userId,
+                    created_at: new Date().toISOString()
+                };
+                
+                const { error } = await supabase
+                    .from('admins')
+                    .upsert(adminData, { onConflict: 'user_id' });
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Ошибка добавления админа:', error);
+                return false;
+            }
+        }
+        
+        // Удаление пользователя из таблицы админов (для выхода)
+        async function removeUserFromAdmins() {
+            try {
+                if (!supabase) return false;
+                
+                const { error } = await supabase
+                    .from('admins')
+                    .delete()
+                    .eq('user_id', userId);
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Ошибка удаления админа:', error);
+                return false;
+            }
+        }
+        
+        // Проверка прав администратора перед действием
+        async function requireAdminAccess() {
+            if (!appState.isAdmin) {
+                showMessage('Доступ запрещен', 'Требуются права администратора');
+                return false;
+            }
+            
+            // Дополнительная проверка в базе данных
+            const isAdminInDB = await checkAdminInDatabase();
+            if (!isAdminInDB) {
+                showMessage('Доступ запрещен', 'Ваши права администратора были отозваны');
+                logoutAdmin();
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // ========== ФУНКЦИИ УПРАВЛЕНИЯ СЕССИЕЙ ==========
+        
+        // Вход администратора
+        async function loginAdmin(password) {
+            try {
+                const isValid = await verifyAdminPassword(password);
+                
+                if (isValid) {
+                    // Создаем сессию
+                    const sessionToken = createSessionToken();
+                    localStorage.setItem(ADMIN_SESSION_KEY, sessionToken);
+                    
+                    // Обновляем состояние
+                    appState.isAdmin = true;
+                    checkAdminStatus();
+                    
+                    return true;
+                } else {
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error('Ошибка входа:', error);
+                return false;
+            }
+        }
+        
+        // Проверка активной сессии
+        async function checkAdminSession() {
+            const sessionToken = localStorage.getItem(ADMIN_SESSION_KEY);
+            
+            if (!sessionToken) {
+                appState.isAdmin = false;
+                return false;
+            }
+            
+            const isValid = await validateSessionToken(sessionToken);
+            
+            if (isValid) {
+                appState.isAdmin = true;
+                return true;
+            } else {
+                localStorage.removeItem(ADMIN_SESSION_KEY);
+                appState.isAdmin = false;
+                return false;
+            }
+        }
+        
+        // Выход администратора
+        async function logoutAdmin() {
+            try {
+                // Удаляем из таблицы админов
+                await removeUserFromAdmins();
+                
+                // Очищаем сессию
+                localStorage.removeItem(ADMIN_SESSION_KEY);
+                appState.isAdmin = false;
+                
+                // Обновляем UI
+                checkAdminStatus();
+                
+                showMessage('Выход', 'Вы вышли из админ-панели');
+                
+            } catch (error) {
+                console.error('Ошибка выхода:', error);
+                // Все равно очищаем локальные данные
+                localStorage.removeItem(ADMIN_SESSION_KEY);
+                appState.isAdmin = false;
+                checkAdminStatus();
+            }
+        }
+        
+        // ========== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ==========
+        
         document.addEventListener('DOMContentLoaded', async () => {
             setupEventListeners();
+            await checkAdminSession(); // Проверяем активную сессию
             await loadUserProfile();
             await loadContests();
             checkAdminStatus();
@@ -1306,7 +1570,7 @@
                 });
             }
             
-            // Пункт меню "Добавить конкурс" (виден только админам)
+            // Пункт меню "Добавить конкурс"
             const addContestMenuItem = document.getElementById('add-contest-menu-item');
             if (addContestMenuItem) {
                 addContestMenuItem.addEventListener('click', (e) => {
@@ -1320,12 +1584,22 @@
                 });
             }
             
+            // Пункт меню "Выйти"
+            const logoutMenuItem = document.getElementById('logout-menu-item');
+            if (logoutMenuItem) {
+                logoutMenuItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    logoutAdmin();
+                    hideMenu();
+                });
+            }
+            
             // Кнопка администратора в заголовке
             const adminLoginBtn = document.getElementById('admin-login-btn');
             if (adminLoginBtn) {
                 adminLoginBtn.addEventListener('click', () => {
                     if (appState.isAdmin) {
-                        showPage('home');
+                        logoutAdmin();
                     } else {
                         showAdminModal();
                     }
@@ -1370,10 +1644,15 @@
                 cancelAdminPassword.addEventListener('click', hideAdminModal);
             }
             
-            // Форма конкурса (админ)
+            // Форма конкурса (админ) с защитой
             const saveContestBtn = document.getElementById('save-contest-btn');
             if (saveContestBtn) {
-                saveContestBtn.addEventListener('click', saveContest);
+                saveContestBtn.addEventListener('click', async () => {
+                    const hasAccess = await requireAdminAccess();
+                    if (hasAccess) {
+                        saveContest();
+                    }
+                });
             }
             
             const cancelContestBtn = document.getElementById('cancel-contest-btn');
@@ -1383,7 +1662,12 @@
             
             const deleteContestBtn = document.getElementById('delete-contest-btn');
             if (deleteContestBtn) {
-                deleteContestBtn.addEventListener('click', deleteContest);
+                deleteContestBtn.addEventListener('click', async () => {
+                    const hasAccess = await requireAdminAccess();
+                    if (hasAccess) {
+                        deleteContest();
+                    }
+                });
             }
             
             // Модальное окно для работы
@@ -1435,223 +1719,40 @@
             }
         }
         
-        // Функции для работы с модальными окнами
-        function showAdminModal() {
-            adminModal.style.display = 'flex';
-            const adminPasswordInput = document.getElementById('admin-password');
-            if (adminPasswordInput) {
-                adminPasswordInput.focus();
-            }
-        }
-        
-        function hideAdminModal() {
-            adminModal.style.display = 'none';
-            const adminPasswordInput = document.getElementById('admin-password');
-            if (adminPasswordInput) {
-                adminPasswordInput.value = '';
-            }
-        }
-        
-        function showWorkModal(message) {
-            const messageEl = document.getElementById('work-modal-message');
+        // Проверка пароля администратора (обновленная)
+        async function checkAdminPassword() {
+            const passwordInput = document.getElementById('admin-password');
+            const password = passwordInput ? passwordInput.value : '';
             
-            // Получаем информацию о конкурсе
-            const contest = appState.contests.find(c => c.id == appState.currentContestId);
-            let additionalInfo = '';
-            
-            if (contest) {
-                const maxParticipants = contest.max_participants || 0;
-                const currentParticipants = contest.participant_count || 0;
-                
-                if (maxParticipants > 0) {
-                    const remaining = maxParticipants - currentParticipants;
-                    const statusColor = remaining > 0 ? 'var(--primary-red)' : 'var(--primary-red)';
-                    additionalInfo = `<div style="margin-top: 10px; padding: 8px; background-color: #e8f5e8; border-radius: 5px; font-size: 14px; border-left: 3px solid ${statusColor};">
-                        <strong>Осталось мест:</strong> ${remaining} из ${maxParticipants}
-                        ${remaining <= 0 ? '<br><small style="color: var(--primary-red);">Регистрация закрыта</small>' : ''}
-                    </div>`;
-                }
+            if (!password) {
+                showMessage('Ошибка', 'Введите пароль');
+                return;
             }
             
-            if (message.includes('заполнить профиль')) {
-                messageEl.innerHTML = `<div class="alert alert-warning">${message}</div>${additionalInfo}`;
-                workLinkInput.style.display = 'none';
-                document.getElementById('submit-work-link').style.display = 'none';
-                
-                // Добавляем кнопку "Заполнить профиль"
-                const fillProfileBtn = document.createElement('button');
-                fillProfileBtn.className = 'button button-primary';
-                fillProfileBtn.innerHTML = '<i class="fas fa-user-edit"></i> Заполнить профиль';
-                fillProfileBtn.style.marginTop = '15px';
-                fillProfileBtn.style.width = '100%';
-                fillProfileBtn.onclick = function() {
-                    hideWorkModal();
-                    showPage('profile');
-                };
-                
-                messageEl.appendChild(fillProfileBtn);
+            const success = await loginAdmin(password);
+            
+            if (success) {
+                hideAdminModal();
+                showMessage('Успех', 'Вы вошли в режим администратора', () => {
+                    showPage('home');
+                });
             } else {
-                messageEl.innerHTML = `<p>${message}</p>${additionalInfo}`;
-                workLinkInput.style.display = 'block';
-                document.getElementById('submit-work-link').style.display = 'block';
-            }
-            
-            workModal.style.display = 'flex';
-            workLinkInput.value = '';
-            if (workLinkInput) {
-                workLinkInput.focus();
+                showMessage('Ошибка', 'Неверный пароль!');
             }
         }
         
-        function hideWorkModal() {
-            workModal.style.display = 'none';
-            workLinkInput.value = '';
-        }
-        
-        function showMessage(title, text, callback) {
-            const titleEl = document.getElementById('message-title');
-            const textEl = document.getElementById('message-text');
-            const okBtn = document.getElementById('message-ok-btn');
-            
-            if (titleEl) titleEl.textContent = title;
-            if (textEl) textEl.textContent = text;
-            
-            messageModal.style.display = 'flex';
-            
-            // Обработчик для кнопки OK
-            const handleOkClick = function() {
-                hideMessageModal();
-                if (typeof callback === 'function') {
-                    callback();
-                }
-                okBtn.removeEventListener('click', handleOkClick);
-            };
-            
-            okBtn.addEventListener('click', handleOkClick);
-            
-            // Закрытие по клику на фон
-            const handleModalClick = function(event) {
-                if (event.target === messageModal) {
-                    hideMessageModal();
-                    if (typeof callback === 'function') {
-                        callback();
-                    }
-                    messageModal.removeEventListener('click', handleModalClick);
-                }
-            };
-            
-            messageModal.addEventListener('click', handleModalClick);
-            
-            // Закрытие по Escape
-            const closeOnEscape = function(event) {
-                if (event.key === 'Escape') {
-                    hideMessageModal();
-                    if (typeof callback === 'function') {
-                        callback();
-                    }
-                    document.removeEventListener('keydown', closeOnEscape);
-                }
-            };
-            
-            document.addEventListener('keydown', closeOnEscape);
-        }
-        
-        function hideMessageModal() {
-            messageModal.style.display = 'none';
-        }
-        
-        function showCommentModal(isReply = false, parentComment = null) {
-            if (commentText) {
-                commentText.value = '';
-            }
-            appState.currentReplyTo = parentComment;
-            
-            if (isReply && parentComment) {
-                commentModalTitle.textContent = 'Ответить на комментарий';
-                replyToInfo.innerHTML = `Ответ пользователю <strong>${parentComment.username}</strong>`;
-                replyToInfo.style.display = 'block';
-            } else {
-                commentModalTitle.textContent = 'Добавить комментарий';
-                replyToInfo.style.display = 'none';
-            }
-            
-            commentModal.style.display = 'flex';
-            if (commentText) {
-                commentText.focus();
-            }
-        }
-        
-        function hideCommentModal() {
-            commentModal.style.display = 'none';
-            if (commentText) {
-                commentText.value = '';
-            }
-            replyToInfo.style.display = 'none';
-            appState.currentReplyTo = null;
-        }
-        
-        // Показать/скрыть меню
-        function toggleMenu() {
-            const menu = document.getElementById('menu-dropdown');
-            if (menu) {
-                menu.classList.toggle('show');
-            }
-        }
-        
-        function hideMenu() {
-            const menu = document.getElementById('menu-dropdown');
-            if (menu) {
-                menu.classList.remove('show');
-            }
-        }
-        
-        // Переключение между страницами
-        function showPage(page) {
-            // Скрыть все страницы
-            homePage.classList.add('hidden');
-            contestPage.classList.add('hidden');
-            votingPage.classList.add('hidden');
-            profilePage.classList.add('hidden');
-            adminContestPage.classList.add('hidden');
-            
-            // Показать нужную страницу
-            switch(page) {
-                case 'home':
-                    homePage.classList.remove('hidden');
-                    appState.currentPage = 'home';
-                    break;
-                case 'contest':
-                    contestPage.classList.remove('hidden');
-                    appState.currentPage = 'contest';
-                    break;
-                case 'voting':
-                    votingPage.classList.remove('hidden');
-                    appState.currentPage = 'voting';
-                    break;
-                case 'profile':
-                    profilePage.classList.remove('hidden');
-                    appState.currentPage = 'profile';
-                    break;
-                case 'admin-contest':
-                    adminContestPage.classList.remove('hidden');
-                    appState.currentPage = 'admin-contest';
-                    break;
-            }
-            
-            // Всегда скрывать меню при переходе
-            hideMenu();
-        }
-        
-        // Проверка статуса администратора
+        // Проверка статуса администратора (обновленная)
         function checkAdminStatus() {
             const adminBtn = document.getElementById('admin-login-btn');
             const adminMenuItem = document.getElementById('admin-menu-item');
             const addContestMenuItem = document.getElementById('add-contest-menu-item');
+            const logoutMenuItem = document.getElementById('logout-menu-item');
             
             if (appState.isAdmin) {
                 if (adminBtn) {
                     adminBtn.style.display = 'block';
                     adminBtn.textContent = 'Выход';
+                    adminBtn.title = 'Выйти из админ-панели';
                 }
                 if (adminMenuItem) {
                     adminMenuItem.innerHTML = '<i class="fas fa-user-cog"></i> Админ-панель';
@@ -1659,9 +1760,14 @@
                 if (addContestMenuItem) {
                     addContestMenuItem.style.display = 'flex';
                 }
+                if (logoutMenuItem) {
+                    logoutMenuItem.style.display = 'flex';
+                }
             } else {
                 if (adminBtn) {
-                    adminBtn.style.display = 'none';
+                    adminBtn.style.display = 'block';
+                    adminBtn.textContent = 'А';
+                    adminBtn.title = 'Вход для администратора';
                 }
                 if (adminMenuItem) {
                     adminMenuItem.innerHTML = '<i class="fas fa-lock"></i> Админ-панель';
@@ -1669,8 +1775,13 @@
                 if (addContestMenuItem) {
                     addContestMenuItem.style.display = 'none';
                 }
+                if (logoutMenuItem) {
+                    logoutMenuItem.style.display = 'none';
+                }
             }
         }
+        
+        // ========== ЗАЩИЩЕННЫЕ АДМИН-ФУНКЦИИ ==========
         
         // Проверка пароля администратора
         async function checkAdminPassword() {
@@ -2364,6 +2475,26 @@
         
         // Удаление комментария
         async function deleteComment(commentId) {
+const commentToDelete = appState.comments.find(c => c.id === commentId);
+            if (!commentToDelete) {
+                showMessage('Ошибка', 'Комментарий не найден');
+                return;
+            }
+            
+            const canDelete = appState.isAdmin || 
+                            (commentToDelete.user_id && commentToDelete.user_id.toString() === userId.toString());
+            
+            if (!canDelete) {
+                showMessage('Ошибка', 'У вас нет прав для удаления этого комментария');
+                return;
+            }
+            
+            // Если админ удаляет, проверяем права
+            if (appState.isAdmin) {
+                const hasAccess = await requireAdminAccess();
+                if (!hasAccess) return;
+            }
+            
             if (!supabase) {
                 showMessage('Ошибка', 'База данных не доступна');
                 return;
@@ -2814,6 +2945,16 @@
         
         // Сохранить/обновить конкурс
         async function saveContest() {
+            const hasAccess = await requireAdminAccess();
+            if (!hasAccess) return;
+            
+            // Остальная логика функции остается без изменений
+            if (!supabase) {
+                showMessage('Ошибка', 'База данных не доступна');
+                return;
+            }
+
+            
             if (!appState.isAdmin) {
                 showMessage('Ошибка', 'У вас нет прав для сохранения конкурсов');
                 return;
@@ -2889,6 +3030,9 @@
         
         // Удалить конкурс
         async function deleteContest(contestId) {
+            const hasAccess = await requireAdminAccess();
+            if (!hasAccess) return;
+            
             if (!appState.isAdmin) {
                 showMessage('Ошибка', 'У вас нет прав для удаления конкурсов');
                 return;
@@ -2981,6 +3125,7 @@
     </script>
 </body>
 </html>
+
 
 
 
